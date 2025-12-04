@@ -333,7 +333,7 @@
                             class="px-6 py-2.5 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors">
                         Cancel
                     </button>
-                    <button onclick="confirmLoadSubject()" 
+                    <button id="confirm-load-btn" onclick="confirmLoadSubject()" 
                             class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-lg transition-all">
                         <svg class="inline-block h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -389,10 +389,10 @@
 
 <!-- Department Selection Modal -->
 <div id="departmentSelectionModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="dept-modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity"></div>
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeDepartmentSelectionModal()"></div>
 
-        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+        <div class="inline-block align-middle bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl sm:w-full">
             <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4">
                 <h3 class="text-xl font-bold text-white" id="dept-modal-title">Select Department</h3>
                 <p class="text-purple-100 text-sm">Choose a department to manage faculty loading</p>
@@ -543,6 +543,21 @@ function detectLoadedConflicts() {
     return conflicts;
 }
 
+// Format day pattern for display
+function formatDayPattern(pattern) {
+    const dayMap = {
+        'M': 'Monday',
+        'T': 'Tuesday',
+        'W': 'Wednesday',
+        'H': 'Thursday',
+        'F': 'Friday',
+        'S': 'Saturday',
+        'U': 'Sunday'
+    };
+    
+    return pattern.split('').map(d => dayMap[d] || d).join(', ');
+}
+
 // Detect all conflicts for checkboxes
 function detectConflicts() {
     const conflicts = new Map();
@@ -610,17 +625,22 @@ function refreshLoadedSubjectsList() {
         
         html += `
             ${hasConflict ? `
-                <div class="bg-red-600 text-white px-4 py-2 text-sm font-semibold">
-                    ⚠ TIME CONFLICT DETECTED<br>
-                    <span class="text-xs font-normal">Conflicts with: ${conflicts.map(c => `${c.subjectCode} (${c.section}) on ${c.dayPattern} at ${c.startTime} - ${c.endTime}`).join(', ')}</span>
+                <div class="bg-red-600 text-white px-4 py-2 text-sm font-semibold flex items-center gap-2">
+                    <svg class="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>TIME CONFLICT DETECTED</span>
+                </div>
+                <div class="bg-red-600 text-white px-4 pb-2 text-xs">
+                    Conflicts with ${conflicts.map(c => `${c.subjectCode} ${c.section} (${c.dayPattern}, ${c.startTime} - ${c.endTime})`).join(', ')}
                 </div>
             ` : ''}
-            <div class="bg-white border-b border-green-200 hover:bg-green-50 transition-colors ${hasConflict ? 'border-l-4 border-l-red-500' : ''}">
+            <div class="${hasConflict ? 'bg-red-50' : 'bg-white'} border-b ${hasConflict ? 'border-red-200' : 'border-green-200'} hover:bg-opacity-80 transition-colors">
                 <div class="p-4">
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-2">
-                                <span class="text-sm font-bold text-gray-900">${schedule.subjectCode}</span>
+                                <span class="text-sm font-bold ${hasConflict ? 'text-blue-700' : 'text-gray-900'}">${schedule.subjectCode}</span>
                                 <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                                     ${schedule.section}
                                 </span>
@@ -649,7 +669,7 @@ function refreshLoadedSubjectsList() {
                             </div>
                         </div>
                         <button onclick="unassignSchedule(${schedule.id})" 
-                                class="ml-3 p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                class="ml-3 p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
                                 title="Remove assignment">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -666,42 +686,44 @@ function refreshLoadedSubjectsList() {
 
 // Add schedule back to unassigned list
 function addToUnassignedList(scheduleData) {
-    const tbody = document.getElementById('unassigned-subjects-tbody');
+    const tbody = document.getElementById('schedulesList');
+    if (!tbody) return;
+    
     const row = document.createElement('tr');
-    row.className = 'hover:bg-orange-50 cursor-pointer transition-colors unassigned-subject-row';
+    row.className = 'hover:bg-orange-100 transition-colors cursor-pointer';
     row.dataset.scheduleId = scheduleData.id;
     row.dataset.dayPattern = scheduleData.dayPatternRaw;
     row.dataset.startTime = scheduleData.startTimeRaw;
     row.dataset.endTime = scheduleData.endTimeRaw;
     row.dataset.subjectCode = scheduleData.subjectCode;
-    row.dataset.subjectTitle = scheduleData.subjectTitle;
     row.dataset.section = scheduleData.section;
-    row.dataset.units = scheduleData.units;
-    row.dataset.room = scheduleData.room;
-    row.dataset.roomCode = scheduleData.roomCode;
     
     row.innerHTML = `
-        <td class="px-3 py-2">
-            <input type="checkbox" class="schedule-checkbox w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+        <td class="px-3 py-3">
+            <input type="checkbox" class="subject-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer" 
                    value="${scheduleData.id}">
         </td>
-        <td class="px-3 py-2">
-            <div class="text-sm font-medium text-gray-900">${scheduleData.subjectCode}</div>
-            <div class="text-xs text-gray-500">${scheduleData.subjectTitle}</div>
+        <td class="px-3 py-3">
+            <div class="text-sm font-semibold text-gray-900">${scheduleData.subjectCode}</div>
+            <div class="text-xs text-gray-600">${scheduleData.subjectTitle.slice(0, 30)}${scheduleData.subjectTitle.length > 30 ? '...' : ''}</div>
+            <div class="flex items-center gap-2 mt-1">
+                <span class="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    ${scheduleData.section}
+                </span>
+                <span class="text-xs text-gray-500">${scheduleData.units}u</span>
+            </div>
         </td>
-        <td class="px-3 py-2 text-sm text-gray-900">${scheduleData.section}</td>
-        <td class="px-3 py-2 text-sm text-gray-900">${scheduleData.units}</td>
-        <td class="px-3 py-2 text-xs text-gray-600">
-            <div>${scheduleData.dayPattern}</div>
-            <div>${scheduleData.startTime} - ${scheduleData.endTime}</div>
-            <div class="text-gray-500">${scheduleData.roomCode || scheduleData.room || 'TBA'}</div>
+        <td class="px-3 py-3">
+            <div class="text-xs text-gray-900 font-medium">${scheduleData.dayPattern}</div>
+            <div class="text-xs text-gray-600">${scheduleData.startTime} - ${scheduleData.endTime}</div>
+            <div class="text-xs text-gray-500 mt-0.5">${scheduleData.roomCode || scheduleData.room || 'TBA'}</div>
         </td>
     `;
     
     tbody.appendChild(row);
     
     // Re-attach checkbox event listener
-    row.querySelector('.schedule-checkbox').addEventListener('change', updateSelectedCount);
+    row.querySelector('.subject-checkbox').addEventListener('change', updateSelectedCount);
 }
 
 // Open Load Subject Modal
@@ -736,6 +758,9 @@ function openLoadSubjectModal(facultyId, facultyName) {
     document.querySelectorAll('.subject-checkbox').forEach(cb => {
         cb.checked = false;
     });
+    
+    // Attach event listeners to checkboxes
+    attachCheckboxListeners();
     
     // Detect conflicts and update unassigned table
     setTimeout(() => {
@@ -793,7 +818,14 @@ function closeLoadSubjectModal() {
 // Update selected count
 function updateSelectedCount() {
     const checkboxes = document.querySelectorAll('.subject-checkbox:checked');
-    document.getElementById('selectedSubjectsCount').textContent = checkboxes.length;
+    const count = checkboxes.length;
+    document.getElementById('selectedSubjectsCount').textContent = count;
+    
+    // Update the selectedScheduleIds Set
+    selectedScheduleIds.clear();
+    checkboxes.forEach(cb => {
+        selectedScheduleIds.add(parseInt(cb.value));
+    });
 }
 
 // Toggle all schedules
@@ -813,13 +845,24 @@ function selectAllSchedules() {
 
 // Confirm Load Subject - Assign with real-time UI update (NO page reload)
 async function confirmLoadSubject() {
-    if (selectedScheduleIds.size === 0) return;
+    // Get checked checkboxes
+    const checkedBoxes = document.querySelectorAll('.subject-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        showTemporaryMessage('Please select at least one subject to assign', 'error');
+        return;
+    }
     
     const button = document.getElementById('confirm-load-btn');
+    if (!button) {
+        console.error('Confirm button not found');
+        return;
+    }
+    
     button.disabled = true;
     button.innerHTML = '<svg class="animate-spin h-5 w-5 inline mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Loading...';
     
-    const scheduleIds = Array.from(selectedScheduleIds);
+    const scheduleIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
     let successCount = 0;
     
     for (const scheduleId of scheduleIds) {
@@ -839,22 +882,27 @@ async function confirmLoadSubject() {
                 successCount++;
                 
                 // Find the row and extract schedule data
-                const row = document.querySelector(`.unassigned-subject-row[data-schedule-id="${scheduleId}"]`);
+                const row = document.querySelector(`#schedulesList tr[data-schedule-id="${scheduleId}"]`);
                 if (row) {
+                    // Extract time from the schedule cell
+                    const scheduleCell = row.querySelector('td:nth-child(3)');
+                    const timeText = scheduleCell.querySelector('div:nth-child(2)').textContent.trim();
+                    const [startTime, endTime] = timeText.split(' - ');
+                    
                     const scheduleData = {
                         id: scheduleId,
                         subjectCode: row.dataset.subjectCode,
-                        subjectTitle: row.dataset.subjectTitle,
-                        units: parseInt(row.dataset.units),
+                        subjectTitle: scheduleCell.querySelector('div:nth-child(1)').textContent.trim(),
+                        units: parseInt(row.querySelector('td:nth-child(2) .text-xs.text-gray-500').textContent.replace('u', '')),
                         section: row.dataset.section,
-                        dayPattern: row.dataset.dayPattern,
+                        dayPattern: scheduleCell.querySelector('div:nth-child(1)').textContent.trim(),
                         dayPatternRaw: row.dataset.dayPattern,
-                        startTime: row.querySelector('td:nth-child(5) div:nth-child(2)').textContent.split(' - ')[0],
+                        startTime: startTime,
                         startTimeRaw: row.dataset.startTime,
-                        endTime: row.querySelector('td:nth-child(5) div:nth-child(2)').textContent.split(' - ')[1],
+                        endTime: endTime,
                         endTimeRaw: row.dataset.endTime,
-                        room: row.dataset.room,
-                        roomCode: row.dataset.roomCode
+                        room: scheduleCell.querySelector('div:nth-child(3)').textContent.trim(),
+                        roomCode: scheduleCell.querySelector('div:nth-child(3)').textContent.trim()
                     };
                     
                     // Add to faculty data
@@ -869,18 +917,25 @@ async function confirmLoadSubject() {
         }
     }
     
-    // Update UI
+    // Update UI without page reload
     refreshLoadedSubjectsList();
     selectedScheduleIds.clear();
     updateSelectedCount();
     
+    // Update the loaded count display
+    document.getElementById('loadedCount').textContent = facultyData[currentFacultyId].assignedSchedules.length;
+    document.getElementById('facultyLoadedCount').textContent = facultyData[currentFacultyId].assignedSchedules.length;
+    
+    // Uncheck the select all checkbox
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = false;
+    }
+    
     button.disabled = false;
-    button.innerHTML = '<svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Load Selected';
+    button.innerHTML = '<svg class="inline-block h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Assign Selected Schedules';
     
     showTemporaryMessage(`${successCount} subject(s) assigned successfully!`, 'success');
-    
-    // Update stats on main page (if visible)
-    setTimeout(() => location.reload(), 1500);
 }
 
 // Unassign schedule with real-time UI update (NO page reload)
@@ -915,10 +970,14 @@ async function unassignSchedule(scheduleId) {
             // Refresh loaded subjects
             refreshLoadedSubjectsList();
             
-            showTemporaryMessage('Subject unassigned successfully!', 'success');
+            // Update the loaded count display
+            document.getElementById('loadedCount').textContent = facultyData[currentFacultyId].assignedSchedules.length;
+            document.getElementById('facultyLoadedCount').textContent = facultyData[currentFacultyId].assignedSchedules.length;
             
-            // Update stats on main page
-            setTimeout(() => location.reload(), 1500);
+            // Reattach checkbox listeners for the newly added row
+            attachCheckboxListeners();
+            
+            showTemporaryMessage('Subject unassigned successfully!', 'success');
         }
     } catch (error) {
         console.error('Error unassigning schedule:', error);
@@ -1003,6 +1062,12 @@ function openDepartmentSelectionModal() {
     document.body.style.overflow = 'hidden';
 }
 
+// Close Department Selection Modal
+function closeDepartmentSelectionModal() {
+    document.getElementById('departmentSelectionModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
 // Auto-show department selection modal if no department selected
 {% if not selectedDepartment %}
 document.addEventListener('DOMContentLoaded', function() {
@@ -1010,11 +1075,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 {% endif %}
 
-// Attach event listeners
-document.addEventListener('DOMContentLoaded', function() {
+// Attach event listeners to checkboxes
+function attachCheckboxListeners() {
     document.querySelectorAll('.subject-checkbox').forEach(checkbox => {
+        checkbox.removeEventListener('change', updateSelectedCount);
         checkbox.addEventListener('change', updateSelectedCount);
     });
+}
+
+// Attach event listeners on page load
+document.addEventListener('DOMContentLoaded', function() {
+    attachCheckboxListeners();
 });
 </script>
 

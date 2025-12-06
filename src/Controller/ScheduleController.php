@@ -8,6 +8,7 @@ use App\Repository\RoomRepository;
 use App\Repository\SubjectRepository;
 use App\Repository\AcademicYearRepository;
 use App\Service\SubjectService;
+use App\Service\ActivityLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,6 +25,7 @@ class ScheduleController extends AbstractController
     private SubjectRepository $subjectRepository;
     private AcademicYearRepository $academicYearRepository;
     private SubjectService $subjectService;
+    private ActivityLogService $activityLogService;
 
     public function __construct(
         EntityManagerInterface $entityManager,
@@ -31,7 +33,8 @@ class ScheduleController extends AbstractController
         RoomRepository $roomRepository,
         SubjectRepository $subjectRepository,
         AcademicYearRepository $academicYearRepository,
-        SubjectService $subjectService
+        SubjectService $subjectService,
+        ActivityLogService $activityLogService
     ) {
         $this->entityManager = $entityManager;
         $this->scheduleRepository = $scheduleRepository;
@@ -39,6 +42,7 @@ class ScheduleController extends AbstractController
         $this->subjectRepository = $subjectRepository;
         $this->academicYearRepository = $academicYearRepository;
         $this->subjectService = $subjectService;
+        $this->activityLogService = $activityLogService;
     }
 
     #[Route('/', name: 'app_schedule_index', methods: ['GET'])]
@@ -332,6 +336,24 @@ class ScheduleController extends AbstractController
                 $this->entityManager->persist($schedule);
                 $this->entityManager->flush();
 
+                // Log the activity
+                $scheduleInfo = sprintf('%s - %s (%s)',
+                    $schedule->getSubject()->getTitle(),
+                    $schedule->getSection(),
+                    $schedule->getDayPattern()
+                );
+                $this->activityLogService->logScheduleActivity(
+                    'schedule.created',
+                    $schedule->getId(),
+                    $scheduleInfo,
+                    [
+                        'subject' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection(),
+                        'room' => $schedule->getRoom()->getName(),
+                        'day_pattern' => $schedule->getDayPattern()
+                    ]
+                );
+
                 $this->addFlash('success', '✅ Schedule created successfully!');
                 
                 return $this->redirectToRoute('app_schedule_index', ['department' => $departmentId]);
@@ -414,6 +436,22 @@ class ScheduleController extends AbstractController
 
                 $this->entityManager->flush();
 
+                // Log the activity
+                $scheduleInfo = sprintf('%s - %s (%s)',
+                    $schedule->getSubject()->getTitle(),
+                    $schedule->getSection(),
+                    $schedule->getDayPattern()
+                );
+                $this->activityLogService->logScheduleActivity(
+                    'schedule.updated',
+                    $schedule->getId(),
+                    $scheduleInfo,
+                    [
+                        'subject' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection()
+                    ]
+                );
+
                 $this->addFlash('success', 'Schedule updated successfully!');
                 
                 // Redirect back to schedule list with department filter preserved
@@ -443,8 +481,24 @@ class ScheduleController extends AbstractController
         $departmentId = $scheduleDepartment ? $scheduleDepartment->getId() : null;
         
         if ($this->isCsrfTokenValid('delete'.$schedule->getId(), $request->request->get('_token'))) {
+            // Log the activity before deletion
+            $scheduleInfo = sprintf('%s - %s (%s)',
+                $schedule->getSubject()->getTitle(),
+                $schedule->getSection(),
+                $schedule->getDayPattern()
+            );
+            $scheduleId = $schedule->getId();
+            
             $this->entityManager->remove($schedule);
             $this->entityManager->flush();
+            
+            $this->activityLogService->log(
+                'schedule.deleted',
+                "Schedule deleted: {$scheduleInfo}",
+                'Schedule',
+                $scheduleId
+            );
+            
             $this->addFlash('success', 'Schedule deleted successfully!');
         }
 
@@ -726,7 +780,14 @@ class ScheduleController extends AbstractController
             }
         }
         
-        $departments = $this->entityManager->getRepository(\App\Entity\Department::class)->findAll();
+        // Get all departments sorted by name
+        $departments = $this->entityManager->getRepository(\App\Entity\Department::class)
+            ->createQueryBuilder('d')
+            ->leftJoin('d.college', 'c')
+            ->addSelect('c')
+            ->orderBy('d.name', 'ASC')
+            ->getQuery()
+            ->getResult();
         
         // LOG: Final state before rendering
         error_log('FINAL STATE - Department ID: ' . ($departmentId ?: 'NULL'));
@@ -772,9 +833,38 @@ class ScheduleController extends AbstractController
                     return $this->json(['success' => false, 'message' => 'Faculty member not found'], 404);
                 }
                 $schedule->setFaculty($faculty);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'schedule.faculty_assigned',
+                    "Faculty assigned to schedule: {$faculty->getFullName()} - {$schedule->getSubject()->getTitle()} ({$schedule->getSection()})",
+                    'Schedule',
+                    $schedule->getId(),
+                    [
+                        'faculty_name' => $faculty->getFullName(),
+                        'subject' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection()
+                    ]
+                );
             } else {
                 // Unassign faculty
+                $oldFaculty = $schedule->getFaculty();
                 $schedule->setFaculty(null);
+                
+                // Log the activity
+                if ($oldFaculty) {
+                    $this->activityLogService->log(
+                        'schedule.faculty_unassigned',
+                        "Faculty unassigned from schedule: {$oldFaculty->getFullName()} - {$schedule->getSubject()->getTitle()} ({$schedule->getSection()})",
+                        'Schedule',
+                        $schedule->getId(),
+                        [
+                            'faculty_name' => $oldFaculty->getFullName(),
+                            'subject' => $schedule->getSubject()->getTitle(),
+                            'section' => $schedule->getSection()
+                        ]
+                    );
+                }
             }
             
             $this->entityManager->flush();

@@ -148,8 +148,29 @@
                     <a href="#" class="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">View All</a>
                 </div>
                 
-                <div class="space-y-3 lg:space-y-4">
-                    {% if dashboard_data.recent_users is defined and dashboard_data.recent_users|length > 0 %}
+                <div class="space-y-3 lg:space-y-4" id="recent-activities-container">
+                    {% if dashboard_data.recent_activities is defined and dashboard_data.recent_activities|length > 0 %}
+                        {% for activity in dashboard_data.recent_activities %}
+                            <div class="flex items-start space-x-3 lg:space-x-4 p-3 lg:p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 {{ activity.iconClass }} rounded-full flex items-center justify-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            {{ activity.svgIcon|raw }}
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900">{{ activity.description }}</p>
+                                    {% if activity.user %}
+                                        <p class="text-xs text-gray-500 truncate">by {{ activity.user.firstName }} {{ activity.user.lastName }}</p>
+                                    {% endif %}
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        {{ activity.createdAt|date('M j, Y g:i A') }}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% elseif dashboard_data.recent_users is defined and dashboard_data.recent_users|length > 0 %}
                         {% for user in dashboard_data.recent_users %}
                             <div class="flex items-start space-x-3 lg:space-x-4 p-3 lg:p-4 rounded-lg bg-gray-50">
                                 <div class="flex-shrink-0">
@@ -302,4 +323,40 @@
             </div>
         </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Auto-refresh recent activities every 10 seconds
+        function refreshRecentActivities() {
+            fetch('{{ path('admin_dashboard_recent_activities') }}')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('recent-activities-container');
+                    if (data.activities && data.activities.length > 0) {
+                        container.innerHTML = data.activities.map(activity => `
+                            <div class="flex items-start space-x-3 lg:space-x-4 p-3 lg:p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 ${activity.iconClass} rounded-full flex items-center justify-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            ${activity.svgIcon}
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900">${activity.description}</p>
+                                    ${activity.userName ? `<p class="text-xs text-gray-500 truncate">by ${activity.userName}</p>` : ''}
+                                    <p class="text-xs text-gray-400 mt-1">${activity.createdAt}</p>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => console.error('Error refreshing activities:', error));
+        }
+
+        // Refresh every 10 seconds
+        setInterval(refreshRecentActivities, 10000);
+    </script>
 {% endblock %}

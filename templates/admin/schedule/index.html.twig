@@ -63,86 +63,107 @@
         </div>
     </div>
 
-    <!-- Stats Cards with Animation -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        {% set approvedCount = 0 %}
-        {% set pendingCount = 0 %}
-        {% set rejectedCount = 0 %}
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {% set activeCount = 0 %}
+        {% set conflictedCount = 0 %}
+        {% set uniqueRooms = [] %}
+        {% set uniqueFaculty = [] %}
         {% for schedule in schedules %}
-            {% if schedule.status == 'approved' %}
-                {% set approvedCount = approvedCount + 1 %}
-            {% elseif schedule.status == 'pending' %}
-                {% set pendingCount = pendingCount + 1 %}
-            {% elseif schedule.status == 'rejected' %}
-                {% set rejectedCount = rejectedCount + 1 %}
+            {% if schedule.status == 'active' %}
+                {% set activeCount = activeCount + 1 %}
+            {% endif %}
+            {% if schedule.isConflicted %}
+                {% set conflictedCount = conflictedCount + 1 %}
+            {% endif %}
+            {% if schedule.room and schedule.room.id not in uniqueRooms %}
+                {% set uniqueRooms = uniqueRooms|merge([schedule.room.id]) %}
+            {% endif %}
+            {% if schedule.faculty and schedule.faculty.id not in uniqueFaculty %}
+                {% set uniqueFaculty = uniqueFaculty|merge([schedule.faculty.id]) %}
             {% endif %}
         {% endfor %}
 
         <!-- Total Schedules -->
-        <div class="group bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 text-white transform hover:scale-105">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-blue-100 text-xs font-medium mb-1">Total Schedules</p>
-                    <p class="text-3xl font-bold">{{ schedules|length }}</p>
-                    <p class="text-blue-100 text-xs mt-1">All time records</p>
+        <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all duration-300">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <p class="text-sm text-gray-600 mb-2">Total Schedules</p>
+                    <p class="text-4xl font-bold text-gray-900">{{ schedules|length }}</p>
+                    <p class="text-sm text-gray-500 mt-2">
+                        {% if selectedDepartment %}
+                            {{ selectedDepartment.name }}
+                        {% else %}
+                            All departments
+                        {% endif %}
+                    </p>
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-3">
-                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-blue-500 rounded-xl p-4 flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
             </div>
         </div>
 
-        <!-- Approved -->
-        <div class="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 text-white transform hover:scale-105">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-green-100 text-xs font-medium mb-1">Approved</p>
-                    <p class="text-3xl font-bold">{{ approvedCount }}</p>
-                    <p class="text-green-100 text-xs mt-1">
-                        {% if schedules|length > 0 %}
-                            {{ ((approvedCount / schedules|length) * 100)|round }}% of total
-                        {% else %}
-                            0% of total
-                        {% endif %}
+        <!-- Active Schedules -->
+        <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all duration-300">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <p class="text-sm text-gray-600 mb-2">Active</p>
+                    <p class="text-4xl font-bold text-gray-900">{{ activeCount }}</p>
+                    <p class="text-sm text-green-600 mt-2 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        Currently in use
                     </p>
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-3">
-                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-green-600 rounded-xl p-4 flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
             </div>
         </div>
 
-        <!-- Pending -->
-        <div class="group bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 text-white transform hover:scale-105">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-yellow-100 text-xs font-medium mb-1">Pending</p>
-                    <p class="text-3xl font-bold">{{ pendingCount }}</p>
-                    <p class="text-yellow-100 text-xs mt-1">Awaiting approval</p>
+        <!-- Conflicts -->
+        <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all duration-300">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <p class="text-sm text-gray-600 mb-2">Conflicts</p>
+                    <p class="text-4xl font-bold text-gray-900">{{ conflictedCount }}</p>
+                    <p class="text-sm text-orange-600 mt-2 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        Need attention
+                    </p>
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-3">
-                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-orange-500 rounded-xl p-4 flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
             </div>
         </div>
 
-        <!-- Rejected -->
-        <div class="group bg-gradient-to-br from-red-500 to-pink-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-4 text-white transform hover:scale-105">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-red-100 text-xs font-medium mb-1">Rejected</p>
-                    <p class="text-3xl font-bold">{{ rejectedCount }}</p>
-                    <p class="text-red-100 text-xs mt-1">Need revision</p>
+        <!-- Rooms Utilized -->
+        <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-all duration-300">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <p class="text-sm text-gray-600 mb-2">Rooms Used</p>
+                    <p class="text-4xl font-bold text-gray-900">{{ uniqueRooms|length }}</p>
+                    <p class="text-sm text-red-600 mt-2 flex items-center">
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        {{ uniqueFaculty|length }} faculty assigned
+                    </p>
                 </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-3">
-                    <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                <div class="bg-red-600 rounded-xl p-4 flex items-center justify-center">
+                    <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </div>
             </div>

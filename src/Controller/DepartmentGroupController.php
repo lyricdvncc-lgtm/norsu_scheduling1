@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Service\DepartmentGroupService;
+use App\Service\ActivityLogService;
 use App\Repository\DepartmentGroupRepository;
 use App\Repository\DepartmentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -19,7 +20,8 @@ class DepartmentGroupController extends AbstractController
     public function __construct(
         private DepartmentGroupService $groupService,
         private DepartmentGroupRepository $groupRepository,
-        private DepartmentRepository $departmentRepository
+        private DepartmentRepository $departmentRepository,
+        private ActivityLogService $activityLogService
     ) {
     }
 
@@ -51,6 +53,19 @@ class DepartmentGroupController extends AbstractController
             }
 
             $group = $this->groupService->createGroup($data);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department_group.created',
+                "Department group created: {$group->getName()}",
+                'DepartmentGroup',
+                $group->getId(),
+                [
+                    'name' => $group->getName(),
+                    'description' => $group->getDescription(),
+                    'color' => $group->getColor()
+                ]
+            );
 
             return new JsonResponse([
                 'success' => true,
@@ -94,6 +109,15 @@ class DepartmentGroupController extends AbstractController
             }
 
             $this->groupService->updateGroup($group, $data);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department_group.updated',
+                "Department group updated: {$group->getName()}",
+                'DepartmentGroup',
+                $group->getId(),
+                ['name' => $group->getName()]
+            );
 
             return new JsonResponse([
                 'success' => true,
@@ -119,8 +143,17 @@ class DepartmentGroupController extends AbstractController
                     'message' => 'Group not found'
                 ], 404);
             }
-
+            
+            $groupName = $group->getName();
             $this->groupService->deleteGroup($group);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department_group.deleted',
+                "Department group deleted: {$groupName}",
+                'DepartmentGroup',
+                $id
+            );
 
             return new JsonResponse([
                 'success' => true,
@@ -176,6 +209,19 @@ class DepartmentGroupController extends AbstractController
             }
 
             $this->groupService->assignDepartmentToGroup($department, $group);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department_group.assigned',
+                "Department '{$department->getName()}' assigned to group '{$group->getName()}'",
+                'DepartmentGroup',
+                $group->getId(),
+                [
+                    'department_id' => $department->getId(),
+                    'department_name' => $department->getName(),
+                    'group_name' => $group->getName()
+                ]
+            );
 
             return new JsonResponse([
                 'success' => true,
@@ -212,7 +258,22 @@ class DepartmentGroupController extends AbstractController
                 ], 404);
             }
 
+            $groupName = $department->getDepartmentGroup() ? $department->getDepartmentGroup()->getName() : 'Unknown';
+            
             $this->groupService->unassignDepartment($department);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department_group.unassigned',
+                "Department '{$department->getName()}' removed from group '{$groupName}'",
+                'DepartmentGroup',
+                null,
+                [
+                    'department_id' => $department->getId(),
+                    'department_name' => $department->getName(),
+                    'group_name' => $groupName
+                ]
+            );
 
             return new JsonResponse([
                 'success' => true,

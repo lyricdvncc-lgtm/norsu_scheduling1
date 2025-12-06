@@ -7,6 +7,7 @@ use App\Form\LoginFormType;
 use App\Form\RegistrationFormType;
 use App\Repository\CollegeRepository;
 use App\Repository\DepartmentRepository;
+use App\Service\ActivityLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -58,7 +59,7 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, CollegeRepository $collegeRepository, DepartmentRepository $departmentRepository): Response
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, CollegeRepository $collegeRepository, DepartmentRepository $departmentRepository, ActivityLogService $activityLogService): Response
     {
         $user = new User();
         
@@ -82,6 +83,12 @@ class SecurityController extends AbstractController
 
             $entityManager->persist($user);
             $entityManager->flush();
+
+            // Log the registration activity
+            $activityLogService->logUserActivity('user.created', $user, [
+                'source' => 'self-registration',
+                'role' => 'Faculty'
+            ]);
 
             // Add flash message
             $this->addFlash('success', 'Your account has been created successfully! You can now login.');

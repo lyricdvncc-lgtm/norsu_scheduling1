@@ -12,6 +12,7 @@ use App\Repository\DepartmentRepository;
 use App\Service\DashboardService;
 use App\Service\UserService;
 use App\Service\CollegeService;
+use App\Service\ActivityLogService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,6 +28,7 @@ class AdminController extends AbstractController
     private DashboardService $dashboardService;
     private UserService $userService;
     private CollegeService $collegeService;
+    private ActivityLogService $activityLogService;
     private CollegeRepository $collegeRepository;
     private DepartmentRepository $departmentRepository;
     private EntityManagerInterface $entityManager;
@@ -35,6 +37,7 @@ class AdminController extends AbstractController
         DashboardService $dashboardService, 
         UserService $userService,
         CollegeService $collegeService,
+        ActivityLogService $activityLogService,
         CollegeRepository $collegeRepository,
         DepartmentRepository $departmentRepository,
         EntityManagerInterface $entityManager
@@ -42,6 +45,7 @@ class AdminController extends AbstractController
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
         $this->collegeService = $collegeService;
+        $this->activityLogService = $activityLogService;
         $this->collegeRepository = $collegeRepository;
         $this->departmentRepository = $departmentRepository;
         $this->entityManager = $entityManager;
@@ -69,6 +73,26 @@ class AdminController extends AbstractController
             'page_title' => 'Admin Dashboard',
             'dashboard_data' => $dashboardData,
         ]));
+    }
+    
+    #[Route('/dashboard/recent-activities', name: 'dashboard_recent_activities', methods: ['GET'])]
+    public function getRecentActivities(): JsonResponse
+    {
+        $dashboardData = $this->dashboardService->getAdminDashboardData();
+        $activities = $dashboardData['recent_activities'] ?? [];
+        
+        $activityData = [];
+        foreach ($activities as $activity) {
+            $activityData[] = [
+                'description' => $activity->getDescription(),
+                'userName' => $activity->getUser() ? $activity->getUser()->getFirstName() . ' ' . $activity->getUser()->getLastName() : null,
+                'createdAt' => $activity->getCreatedAt()->format('M j, Y g:i A'),
+                'iconClass' => $activity->getIconClass(),
+                'svgIcon' => $activity->getSvgIcon(),
+            ];
+        }
+        
+        return new JsonResponse(['activities' => $activityData]);
     }
 
     #[Route('/colleges', name: 'colleges')]
@@ -140,7 +164,17 @@ class AdminController extends AbstractController
                     'isActive' => $college->isActive(),
                 ];
 
-                $this->collegeService->createCollege($data);
+                $createdCollege = $this->collegeService->createCollege($data);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'college.created',
+                    "College created: {$createdCollege->getName()} ({$createdCollege->getCode()})",
+                    'College',
+                    $createdCollege->getId(),
+                    ['code' => $createdCollege->getCode(), 'dean' => $createdCollege->getDean()]
+                );
+                
                 $this->addFlash('success', 'College has been created successfully.');
                 
                 return $this->redirectToRoute('admin_colleges');
@@ -208,6 +242,16 @@ class AdminController extends AbstractController
                 ];
 
                 $this->collegeService->updateCollege($college, $data);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'college.updated',
+                    "College updated: {$college->getName()} ({$college->getCode()})",
+                    'College',
+                    $college->getId(),
+                    ['code' => $college->getCode()]
+                );
+                
                 $this->addFlash('success', 'College has been updated successfully.');
                 
                 return $this->redirectToRoute('admin_colleges');
@@ -251,7 +295,19 @@ class AdminController extends AbstractController
 
         try {
             $college = $this->collegeService->getCollegeById($id);
+            $collegeName = $college->getName();
+            $collegeCode = $college->getCode();
+            
             $this->collegeService->deleteCollege($college);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'college.deleted',
+                "College deleted: {$collegeName} ({$collegeCode})",
+                'College',
+                $id
+            );
+            
             $this->addFlash('success', 'College has been deleted successfully.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Error deleting college: ' . $e->getMessage());
@@ -413,6 +469,19 @@ class AdminController extends AbstractController
 
             try {
                 $departmentService->createDepartment($department);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'department.created',
+                    "Department created: {$department->getName()} ({$department->getCode()})",
+                    'Department',
+                    $department->getId(),
+                    [
+                        'code' => $department->getCode(),
+                        'college' => $department->getCollege() ? $department->getCollege()->getName() : null
+                    ]
+                );
+                
                 $this->addFlash('success', 'Department created successfully.');
                 return $this->redirectToRoute('admin_departments');
             } catch (\Exception $e) {
@@ -471,6 +540,16 @@ class AdminController extends AbstractController
 
                 try {
                     $departmentService->updateDepartment($department);
+                    
+                    // Log the activity
+                    $this->activityLogService->log(
+                        'department.updated',
+                        "Department updated: {$department->getName()} ({$department->getCode()})",
+                        'Department',
+                        $department->getId(),
+                        ['code' => $department->getCode()]
+                    );
+                    
                     $this->addFlash('success', 'Department updated successfully.');
                     return $this->redirectToRoute('admin_departments');
                 } catch (\Exception $e) {
@@ -512,7 +591,19 @@ class AdminController extends AbstractController
 
         try {
             $department = $departmentService->getDepartmentById($id);
+            $departmentName = $department->getName();
+            $departmentCode = $department->getCode();
+            
             $departmentService->deleteDepartment($department);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'department.deleted',
+                "Department deleted: {$departmentName} ({$departmentCode})",
+                'Department',
+                $id
+            );
+            
             $this->addFlash('success', 'Department has been deleted successfully.');
         } catch (\Exception $e) {
             $this->addFlash('error', 'Error deleting department: ' . $e->getMessage());
@@ -1561,6 +1652,13 @@ class AdminController extends AbstractController
                 ];
 
                 $createdUser = $this->userService->createUser($userData, $plainPassword);
+                
+                // Log the activity
+                $this->activityLogService->logUserActivity('user.created', $createdUser, [
+                    'role' => $createdUser->getRoleDisplayName(),
+                    'department' => $createdUser->getDepartment() ? $createdUser->getDepartment()->getName() : null
+                ]);
+                
                 $this->addFlash('success', 'User has been created successfully.');
                 
                 // Redirect to appropriate user list based on role
@@ -1661,6 +1759,12 @@ class AdminController extends AbstractController
                 ];
 
                 $this->userService->updateUser($user, $userData, $newPassword);
+                
+                // Log the activity
+                $this->activityLogService->logUserActivity('user.updated', $user, [
+                    'updated_fields' => array_keys($userData),
+                    'password_changed' => !empty($newPassword)
+                ]);
 
                 $this->addFlash('success', 'User has been updated successfully.');
                 
@@ -1726,7 +1830,19 @@ class AdminController extends AbstractController
         try {
             $user = $this->userService->getUserById($id);
             $userRole = $user->getRole();
+            $userName = $user->getFullName();
+            
             $this->userService->deleteUser($user);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'user.deleted',
+                "User {$userName} was deleted",
+                'User',
+                $id,
+                ['role' => $user->getRoleDisplayName()]
+            );
+            
             $this->addFlash('success', 'User has been deleted successfully.');
             
             // Redirect back to appropriate list
@@ -1759,6 +1875,10 @@ class AdminController extends AbstractController
         try {
             $user = $this->userService->getUserById($id);
             $this->userService->activateUser($user);
+            
+            // Log the activity
+            $this->activityLogService->logUserActivity('user.activated', $user);
+            
             $this->addFlash('success', 'User has been activated successfully.');
             
             // Redirect back to referer
@@ -1784,6 +1904,10 @@ class AdminController extends AbstractController
         try {
             $user = $this->userService->getUserById($id);
             $this->userService->deactivateUser($user);
+            
+            // Log the activity
+            $this->activityLogService->logUserActivity('user.deactivated', $user);
+            
             $this->addFlash('success', 'User has been deactivated successfully.');
             
             // Redirect back to referer
@@ -1975,6 +2099,20 @@ class AdminController extends AbstractController
             }
 
             $roomService->createRoom($room);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.created',
+                "Room created: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId(),
+                [
+                    'building' => $room->getBuilding(),
+                    'code' => $room->getCode(),
+                    'capacity' => $room->getCapacity()
+                ]
+            );
+            
             $this->addFlash('success', 'Room created successfully!');
             return $this->redirectToRoute('admin_rooms');
         }
@@ -2008,6 +2146,16 @@ class AdminController extends AbstractController
             }
 
             $roomService->updateRoom($room);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.updated',
+                "Room updated: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId(),
+                ['building' => $room->getBuilding(), 'code' => $room->getCode()]
+            );
+            
             $this->addFlash('success', 'Room updated successfully!');
             return $this->redirectToRoute('admin_rooms');
         }
@@ -2040,7 +2188,18 @@ class AdminController extends AbstractController
             $room = $roomService->getRoomById($id);
             
             if ($room) {
+                $roomName = $room->getBuilding() . ' - ' . $room->getName();
+                
                 $roomService->deleteRoom($room);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'room.deleted',
+                    "Room deleted: {$roomName}",
+                    'Room',
+                    $id
+                );
+                
                 $this->addFlash('success', 'Room deleted successfully!');
             } else {
                 $this->addFlash('error', 'Room not found.');
@@ -2173,6 +2332,19 @@ class AdminController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $academicYearService->createAcademicYear($academicYear);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'academic_year.created',
+                    "Academic year created: {$academicYear->getYear()}",
+                    'AcademicYear',
+                    $academicYear->getId(),
+                    [
+                        'year' => $academicYear->getYear(),
+                        'is_active' => $academicYear->isActive()
+                    ]
+                );
+                
                 $this->addFlash('success', 'Academic year created successfully!');
                 return $this->redirectToRoute('admin_academic_years');
             } catch (\Exception $e) {
@@ -2210,6 +2382,16 @@ class AdminController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $academicYearService->updateAcademicYear($academicYear);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'academic_year.updated',
+                    "Academic year updated: {$academicYear->getYear()}",
+                    'AcademicYear',
+                    $academicYear->getId(),
+                    ['year' => $academicYear->getYear()]
+                );
+                
                 $this->addFlash('success', 'Academic year updated successfully!');
                 return $this->redirectToRoute('admin_academic_years');
             } catch (\Exception $e) {
@@ -2242,7 +2424,17 @@ class AdminController extends AbstractController
         try {
             $academicYear = $academicYearService->getAcademicYearById($id);
             if ($academicYear) {
+                $yearName = $academicYear->getYear();
                 $academicYearService->deleteAcademicYear($academicYear);
+                
+                // Log the activity
+                $this->activityLogService->log(
+                    'academic_year.deleted',
+                    "Academic year deleted: {$yearName}",
+                    'AcademicYear',
+                    $id
+                );
+                
                 $this->addFlash('success', 'Academic year deleted successfully.');
             } else {
                 $this->addFlash('error', 'Academic year not found.');
@@ -2331,7 +2523,7 @@ class AdminController extends AbstractController
 
     /**
      * @param Request $request
-     * @param \Doctrine\ORM\EntityManagerInterface $entityManager
+     * @param EntityManagerInterface $entityManager
      * @param \App\Service\DepartmentService $departmentService
      * @param \App\Service\CurriculumUploadService $uploadService
      * @return JsonResponse
@@ -2339,7 +2531,7 @@ class AdminController extends AbstractController
     #[Route('/curricula/bulk-upload', name: 'curriculum_bulk_upload', methods: ['POST'])]
     public function bulkUploadCurriculum(
         Request $request,
-        \Doctrine\ORM\EntityManagerInterface $entityManager,
+        EntityManagerInterface $entityManager,
         \App\Service\DepartmentService $departmentService,
         \App\Service\CurriculumUploadService $uploadService
     ): JsonResponse

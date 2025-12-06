@@ -31,12 +31,12 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-600">Total Faculty</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">24</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ dashboard_data.total_faculty }}</p>
                         <p class="text-sm text-green-600 mt-2 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                             </svg>
-                            +2 this month
+                            +{{ dashboard_data.this_month_faculty }} this month
                         </p>
                     </div>
                     <div class="gradient-primary p-4 rounded-xl">
@@ -55,12 +55,12 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-600">Active Schedules</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">12</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ dashboard_data.active_schedules }}</p>
                         <p class="text-sm text-green-600 mt-2 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
                             </svg>
-                            All approved
+                            {{ dashboard_data.total_schedules }} total
                         </p>
                     </div>
                     <div class="gradient-success p-4 rounded-xl">
@@ -79,12 +79,12 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-600">Pending Approvals</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">7</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ dashboard_data.pending_schedules }}</p>
                         <p class="text-sm text-amber-600 mt-2 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            3 urgent
+                            {{ dashboard_data.conflicted_schedules }} conflicts
                         </p>
                     </div>
                     <div class="gradient-warning p-4 rounded-xl">
@@ -103,12 +103,12 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-600">Room Utilization</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">87%</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ dashboard_data.room_utilization }}%</p>
                         <p class="text-sm text-blue-600 mt-2 flex items-center">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                             </svg>
-                            Optimal usage
+                            {{ dashboard_data.total_rooms }} rooms
                         </p>
                     </div>
                     <div class="gradient-primary p-4 rounded-xl">
@@ -200,45 +200,60 @@
                 </div>
                 
                 <div class="space-y-4">
-                    <!-- Activity Item -->
-                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl">
-                        <div class="gradient-success p-2 rounded-lg">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                            </svg>
+                    {% if dashboard_data.recent_activities|length > 0 %}
+                        {% for activity in dashboard_data.recent_activities %}
+                            <!-- Activity Item -->
+                            <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl">
+                                <div class="{% if activity.type == 'faculty_added' %}gradient-primary{% elseif activity.type == 'schedule_created' %}gradient-success{% elseif activity.type == 'curriculum_published' %}gradient-warning{% else %}bg-gradient-to-r from-purple-500 to-indigo-600{% endif %} p-2 rounded-lg">
+                                    {% if activity.icon == 'user-add' %}
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                    {% elseif activity.icon == 'calendar' %}
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    {% elseif activity.icon == 'document' %}
+                                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
+                                    <p class="text-xs text-gray-500">{{ activity.description }}</p>
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        {% set diff = date().diff(activity.date) %}
+                                        {% if diff.days == 0 %}
+                                            {% if diff.h == 0 %}
+                                                {% if diff.i == 0 %}
+                                                    Just now
+                                                {% elseif diff.i == 1 %}
+                                                    1 minute ago
+                                                {% else %}
+                                                    {{ diff.i }} minutes ago
+                                                {% endif %}
+                                            {% elseif diff.h == 1 %}
+                                                1 hour ago
+                                            {% else %}
+                                                {{ diff.h }} hours ago
+                                            {% endif %}
+                                        {% elseif diff.days == 1 %}
+                                            Yesterday at {{ activity.date|date('g:i A') }}
+                                        {% elseif diff.days < 7 %}
+                                            {{ diff.days }} days ago
+                                        {% else %}
+                                            {{ activity.date|date('M d, Y') }} at {{ activity.date|date('g:i A') }}
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No recent activity</p>
                         </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Schedule approved</p>
-                            <p class="text-xs text-gray-500">CS 301 - Database Systems</p>
-                            <p class="text-xs text-gray-400 mt-1">2 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl">
-                        <div class="gradient-warning p-2 rounded-lg">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Schedule pending review</p>
-                            <p class="text-xs text-gray-500">IT 205 - Web Development</p>
-                            <p class="text-xs text-gray-400 mt-1">4 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start space-x-4 p-4 bg-gray-50 rounded-xl">
-                        <div class="gradient-primary p-2 rounded-lg">
-                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">New faculty added</p>
-                            <p class="text-xs text-gray-500">Dr. Sarah Johnson - Computer Science</p>
-                            <p class="text-xs text-gray-400 mt-1">Yesterday</p>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -249,90 +264,32 @@
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-semibold text-gray-900">Pending Approvals</h2>
-                    <span class="bg-amber-100 text-amber-800 text-xs font-medium px-3 py-1 rounded-full">7 pending</span>
+                    <span class="bg-amber-100 text-amber-800 text-xs font-medium px-3 py-1 rounded-full">{{ dashboard_data.pending_schedules }} pending</span>
                 </div>
 
                 <div class="space-y-4">
-                    <!-- Approval Item -->
-                    <div class="border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors duration-200">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <h3 class="text-sm font-medium text-gray-900">Schedule Request</h3>
-                                <p class="text-xs text-gray-600 mt-1">CS 401 - Machine Learning</p>
-                                <p class="text-xs text-gray-500 mt-1">Submitted by Dr. Smith</p>
-                                <div class="flex items-center mt-2">
-                                    <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded">Urgent</span>
-                                </div>
-                            </div>
-                            <div class="flex space-x-2 ml-4">
-                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                                <button class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                </button>
-                            </div>
+                    {% if dashboard_data.pending_schedules > 0 %}
+                        <div class="text-center py-8">
+                            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            <p class="text-gray-900 font-medium mb-2">{{ dashboard_data.pending_schedules }} schedules need review</p>
+                            <p class="text-sm text-gray-500">Visit the schedules page to review and approve</p>
                         </div>
-                    </div>
-
-                    <div class="border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors duration-200">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <h3 class="text-sm font-medium text-gray-900">Room Change</h3>
-                                <p class="text-xs text-gray-600 mt-1">IT 301 - Software Engineering</p>
-                                <p class="text-xs text-gray-500 mt-1">Submitted by Prof. Davis</p>
-                                <div class="flex items-center mt-2">
-                                    <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded">Normal</span>
-                                </div>
-                            </div>
-                            <div class="flex space-x-2 ml-4">
-                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                                <button class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                </button>
-                            </div>
+                    {% else %}
+                        <div class="text-center py-8">
+                            <svg class="w-16 h-16 mx-auto text-green-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-gray-900 font-medium mb-2">All caught up!</p>
+                            <p class="text-sm text-gray-500">No pending approvals at the moment</p>
                         </div>
-                    </div>
-
-                    <div class="border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors duration-200">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <h3 class="text-sm font-medium text-gray-900">Schedule Adjustment</h3>
-                                <p class="text-xs text-gray-600 mt-1">CS 205 - Data Structures</p>
-                                <p class="text-xs text-gray-500 mt-1">Submitted by Dr. Wilson</p>
-                                <div class="flex items-center mt-2">
-                                    <span class="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded">Urgent</span>
-                                </div>
-                            </div>
-                            <div class="flex space-x-2 ml-4">
-                                <button class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                                <button class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
 
-                <button class="w-full mt-6 text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors duration-200">
-                    View All Pending Approvals
-                </button>
+                <a href="{{ path('department_head_schedules') }}" class="block w-full mt-6 text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors duration-200">
+                    View All Schedules
+                </a>
             </div>
 
             <!-- Faculty Workload -->
@@ -340,71 +297,34 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-6">Faculty Workload</h2>
                 
                 <div class="space-y-6">
-                    <!-- Faculty Member -->
-                    <div class="flex items-center space-x-4">
-                        <div class="h-10 w-10 rounded-full gradient-primary flex items-center justify-center text-white font-medium">
-                            DS
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between mb-1">
-                                <p class="text-sm font-medium text-gray-900">Dr. Sarah Johnson</p>
-                                <span class="text-xs text-gray-500">18/21 hrs</span>
+                    {% if dashboard_data.faculty_loads|length > 0 %}
+                        {% for load_data in dashboard_data.faculty_loads %}
+                            <!-- Faculty Member -->
+                            <div class="flex items-center space-x-4">
+                                <div class="h-10 w-10 rounded-full {% if load_data.percentage >= 100 %}gradient-danger{% elseif load_data.percentage >= 85 %}gradient-warning{% else %}gradient-success{% endif %} flex items-center justify-center text-white font-medium">
+                                    {{ load_data.faculty.firstName|first }}{{ load_data.faculty.lastName|first }}
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <p class="text-sm font-medium text-gray-900">{{ load_data.faculty.firstName }} {{ load_data.faculty.lastName }}</p>
+                                        <span class="text-xs text-gray-500">{{ load_data.current_load }}/{{ load_data.max_load }} hrs</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="{% if load_data.percentage >= 100 %}gradient-danger{% elseif load_data.percentage >= 85 %}gradient-warning{% else %}gradient-success{% endif %} h-2 rounded-full" style="width: {{ load_data.percentage > 100 ? 100 : load_data.percentage }}%"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="gradient-success h-2 rounded-full" style="width: 85%"></div>
-                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <p class="text-gray-500">No faculty workload data available</p>
                         </div>
-                    </div>
-
-                    <div class="flex items-center space-x-4">
-                        <div class="h-10 w-10 rounded-full gradient-warning flex items-center justify-center text-white font-medium">
-                            MS
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between mb-1">
-                                <p class="text-sm font-medium text-gray-900">Prof. Michael Smith</p>
-                                <span class="text-xs text-gray-500">21/21 hrs</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="gradient-warning h-2 rounded-full" style="width: 100%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-4">
-                        <div class="h-10 w-10 rounded-full gradient-danger flex items-center justify-center text-white font-medium">
-                            ED
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between mb-1">
-                                <p class="text-sm font-medium text-gray-900">Dr. Emily Davis</p>
-                                <span class="text-xs text-gray-500">24/21 hrs</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="gradient-danger h-2 rounded-full" style="width: 114%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-4">
-                        <div class="h-10 w-10 rounded-full gradient-success flex items-center justify-center text-white font-medium">
-                            JW
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center justify-between mb-1">
-                                <p class="text-sm font-medium text-gray-900">Prof. John Wilson</p>
-                                <span class="text-xs text-gray-500">15/21 hrs</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="gradient-primary h-2 rounded-full" style="width: 71%"></div>
-                            </div>
-                        </div>
-                    </div>
+                    {% endif %}
                 </div>
 
-                <button class="w-full mt-6 text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors duration-200">
+                <a href="{{ path('department_head_reports_faculty_workload') }}" class="block w-full mt-6 text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors duration-200">
                     View Detailed Workload Report
-                </button>
+                </a>
             </div>
         </div>
     </div>

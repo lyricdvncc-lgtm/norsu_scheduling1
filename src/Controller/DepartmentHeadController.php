@@ -13,6 +13,7 @@ use App\Service\DepartmentHeadService;
 use App\Service\UserService;
 use App\Service\ScheduleConflictDetector;
 use App\Service\TeachingLoadPdfService;
+use App\Service\ActivityLogService;
 use App\Repository\DepartmentRepository;
 use App\Repository\RoomRepository;
 use App\Repository\ScheduleRepository;
@@ -41,6 +42,7 @@ class DepartmentHeadController extends AbstractController
     private ScheduleConflictDetector $conflictDetector;
     private EntityManagerInterface $entityManager;
     private TeachingLoadPdfService $pdfService;
+    private ActivityLogService $activityLogService;
 
     public function __construct(
         DashboardService $dashboardService,
@@ -53,11 +55,13 @@ class DepartmentHeadController extends AbstractController
         AcademicYearRepository $academicYearRepository,
         ScheduleConflictDetector $conflictDetector,
         EntityManagerInterface $entityManager,
-        TeachingLoadPdfService $pdfService
+        TeachingLoadPdfService $pdfService,
+        ActivityLogService $activityLogService
     ) {
         $this->dashboardService = $dashboardService;
         $this->departmentHeadService = $departmentHeadService;
         $this->userService = $userService;
+        $this->activityLogService = $activityLogService;
         $this->departmentRepository = $departmentRepository;
         $this->roomRepository = $roomRepository;
         $this->scheduleRepository = $scheduleRepository;
@@ -476,7 +480,7 @@ class DepartmentHeadController extends AbstractController
     #[Route('/curricula/bulk-upload', name: 'curricula_bulk_upload', methods: ['POST'])]
     public function bulkUploadCurriculum(
         Request $request,
-        \Doctrine\ORM\EntityManagerInterface $entityManager,
+        EntityManagerInterface $entityManager,
         \App\Service\CurriculumUploadService $uploadService
     ): JsonResponse
     {
@@ -659,6 +663,20 @@ class DepartmentHeadController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->entityManager->persist($room);
             $this->entityManager->flush();
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.created',
+                "Room created: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId(),
+                [
+                    'building' => $room->getBuilding(),
+                    'code' => $room->getCode(),
+                    'capacity' => $room->getCapacity(),
+                    'department' => $department->getName()
+                ]
+            );
 
             $this->addFlash('success', 'Room created successfully.');
             return $this->redirectToRoute('department_head_rooms');
@@ -691,6 +709,15 @@ class DepartmentHeadController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $room->setUpdatedAt(new \DateTime());
             $this->entityManager->flush();
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.updated',
+                "Room updated: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId(),
+                ['building' => $room->getBuilding(), 'code' => $room->getCode()]
+            );
 
             $this->addFlash('success', 'Room updated successfully.');
             return $this->redirectToRoute('department_head_rooms');
@@ -735,6 +762,14 @@ class DepartmentHeadController extends AbstractController
             $room->setIsActive(true);
             $room->setUpdatedAt(new \DateTime());
             $this->entityManager->flush();
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.activated',
+                "Room activated: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId()
+            );
 
             $this->addFlash('success', 'Room activated successfully.');
         } catch (\Exception $e) {
@@ -756,6 +791,14 @@ class DepartmentHeadController extends AbstractController
             $room->setIsActive(false);
             $room->setUpdatedAt(new \DateTime());
             $this->entityManager->flush();
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'room.deactivated',
+                "Room deactivated: {$room->getBuilding()} - {$room->getName()}",
+                'Room',
+                $room->getId()
+            );
 
             $this->addFlash('success', 'Room deactivated successfully.');
         } catch (\Exception $e) {
@@ -920,6 +963,25 @@ class DepartmentHeadController extends AbstractController
                 // Save the schedule
                 $this->entityManager->persist($schedule);
                 $this->entityManager->flush();
+                
+                // Log the activity
+                $scheduleInfo = sprintf('%s - %s (%s)',
+                    $schedule->getSubject()->getTitle(),
+                    $schedule->getSection(),
+                    $schedule->getDayPattern()
+                );
+                $this->activityLogService->log(
+                    'schedule.created',
+                    "Schedule created: {$scheduleInfo}",
+                    'Schedule',
+                    $schedule->getId(),
+                    [
+                        'subject' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection(),
+                        'room' => $schedule->getRoom()->getName(),
+                        'day_pattern' => $schedule->getDayPattern()
+                    ]
+                );
 
                 $this->addFlash('success', '✅ Schedule created successfully!');
                 
@@ -1170,11 +1232,20 @@ class DepartmentHeadController extends AbstractController
         try {
             $subjectCode = $schedule->getSubject()->getCode();
             $section = $schedule->getSection();
+            $scheduleInfo = "{$subjectCode} (Section {$section})";
             
             $this->entityManager->remove($schedule);
             $this->entityManager->flush();
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'schedule.deleted',
+                "Schedule deleted: {$scheduleInfo}",
+                'Schedule',
+                $schedule->getId()
+            );
 
-            $this->addFlash('success', "Schedule for {$subjectCode} (Section {$section}) deleted successfully.");
+            $this->addFlash('success', "Schedule for {$scheduleInfo} deleted successfully.");
         } catch (\Exception $e) {
             $this->addFlash('error', 'Error deleting schedule: ' . $e->getMessage());
         }
@@ -1395,8 +1466,37 @@ class DepartmentHeadController extends AbstractController
             }
             
             $schedule->setFaculty($faculty);
+            
+            // Log the activity
+            $this->activityLogService->log(
+                'schedule.faculty_assigned',
+                "Faculty assigned to schedule: {$faculty->getFullName()} - {$schedule->getSubject()->getTitle()} ({$schedule->getSection()})",
+                'Schedule',
+                $schedule->getId(),
+                [
+                    'faculty_name' => $faculty->getFullName(),
+                    'subject' => $schedule->getSubject()->getTitle(),
+                    'section' => $schedule->getSection()
+                ]
+            );
         } else {
+            $oldFaculty = $schedule->getFaculty();
             $schedule->setFaculty(null);
+            
+            // Log the activity
+            if ($oldFaculty) {
+                $this->activityLogService->log(
+                    'schedule.faculty_unassigned',
+                    "Faculty unassigned from schedule: {$oldFaculty->getFullName()} - {$schedule->getSubject()->getTitle()} ({$schedule->getSection()})",
+                    'Schedule',
+                    $schedule->getId(),
+                    [
+                        'faculty_name' => $oldFaculty->getFullName(),
+                        'subject' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection()
+                    ]
+                );
+            }
         }
 
         try {

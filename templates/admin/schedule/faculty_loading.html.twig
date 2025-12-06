@@ -2,6 +2,94 @@
 
 {% block title %}Faculty Loading - Admin Dashboard{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <!-- DataTables CSS - Local -->
+    <link rel="stylesheet" href="{{ asset('vendor/css/jquery.dataTables.min.css') }}">
+    <style>
+        /* Custom DataTables styling */
+        .dataTables_wrapper .dataTables_length {
+            margin-bottom: 0;
+        }
+        
+        .dataTables_wrapper .dataTables_length select {
+            padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            background-color: white;
+            font-size: 0.875rem;
+            margin: 0 0.5rem;
+        }
+        
+        .dataTables_wrapper .dataTables_length label {
+            font-size: 0.875rem;
+            color: #4b5563;
+            font-weight: 500;
+        }
+        
+        .dataTables_wrapper .dataTables_info {
+            padding-top: 0;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate {
+            padding-top: 0;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.5rem 0.75rem;
+            margin: 0 0.125rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            font-size: 0.875rem;
+            min-width: 2.5rem;
+            text-align: center;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: #4f46e5 !important;
+            color: white !important;
+            border: 1px solid #4f46e5 !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.disabled):not(.current) {
+            background: #f3f4f6 !important;
+            color: #374151 !important;
+            border: 1px solid #d1d5db !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            color: #9ca3af !important;
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button.previous,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.next {
+            background: white;
+            border: 1px solid #d1d5db;
+        }
+        
+        table.dataTable thead th {
+            border-bottom: 2px solid #e5e7eb;
+            padding: 0.75rem;
+            font-weight: 600;
+        }
+        
+        table.dataTable tbody tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        /* Remove default DataTables search box */
+        .dataTables_wrapper .dataTables_filter {
+            display: none;
+        }
+    </style>
+{% endblock %}
+
 {% block main_content %}
 <div class="p-4 lg:p-6">
     <!-- Page Header -->
@@ -91,81 +179,116 @@
             </div>
         </div>
 
-        <!-- Faculty Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {% for member in faculty %}
-                {% set assignedSchedules = scheduledSubjects|filter(s => s.faculty and s.faculty.id == member.id) %}
-                {% set unassignedCount = scheduledSubjects|filter(s => s.faculty is null)|length %}
-                
-                <div class="bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100">
-                    <!-- Card Content -->
-                    <div class="p-6">
-                        <!-- Avatar -->
-                        <div class="flex justify-center mb-4">
-                            <div class="w-24 h-24 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                                {{ member.firstName|first|upper }}{{ member.lastName|first|upper }}
-                            </div>
-                        </div>
+        <!-- Show per page control - positioned before table -->
+        <div class="mb-4 flex items-center gap-2">
+            <span class="text-sm font-medium text-gray-700">Show</span>
+            <select id="showFilter" class="rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 pr-8 bg-white">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+            <span class="text-sm text-gray-600">users per page</span>
+        </div>
 
-                        <!-- Faculty Info -->
-                        <div class="text-center mb-4">
-                            <h3 class="text-lg font-bold text-gray-900 mb-1">{{ member.firstName }} {{ member.lastName }}</h3>
-                            <p class="text-sm text-gray-500 mb-3">{{ member.email }}</p>
-                            {% if member.department %}
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        <!-- Faculty Table -->
+        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <!-- Table Header with Filters -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-end gap-4">
+                <!-- Filters -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <label for="statusFilter" class="text-sm font-medium text-gray-700">Status:</label>
+                        <select id="statusFilter" class="rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2 px-3 pr-8 bg-white">
+                            <option value="">All</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table id="facultyTable" class="min-w-full divide-y divide-gray-200 display">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty Member</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Added</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-orderable="false">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for member in faculty %}
+                            {% set assignedSchedules = scheduledSubjects|filter(s => s.faculty and s.faculty.id == member.id) %}
+                            {% set unassignedCount = scheduledSubjects|filter(s => s.faculty is null)|length %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0 h-10 w-10">
+                                            <div class="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
+                                                {{ member.firstName|first|upper }}{{ member.lastName|first|upper }}
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">{{ member.firstName }} {{ member.lastName }}</div>
+                                            <div class="text-sm text-gray-500">{{ member.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ member.employeeId ?: 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ member.position ?: 'N/A' }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if member.isActive %}
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                                    {% else %}
+                                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ member.createdAt ? member.createdAt|date('M d, Y') : 'N/A' }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="viewFacultyAssignments({{ member.id }})"
+                                                class="text-indigo-600 hover:text-indigo-900 inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-indigo-50 transition" 
+                                                title="View">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                            </svg>
+                                        </button>
+                                        <button onclick="openLoadSubjectModal({{ member.id }}, '{{ member.firstName|e('js') }} {{ member.lastName|e('js') }}')"
+                                                class="text-blue-600 hover:text-blue-900 inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-blue-50 transition" 
+                                                title="Load Subject">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                                     </svg>
-                                    {{ member.department.name }}
-                                </span>
-                            {% endif %}
-                        </div>
-
-                        <!-- Stats -->
-                        <div class="flex items-center justify-center gap-12 mb-5">
-                            <div class="text-center">
-                                <p class="text-3xl font-bold text-purple-600">{{ assignedSchedules|length }}</p>
-                                <p class="text-sm text-gray-500 mt-1">Assigned</p>
-                            </div>
-                            <div class="text-center">
-                                <p class="text-3xl font-bold text-orange-500">{{ unassignedCount }}</p>
-                                <p class="text-sm text-gray-500 mt-1">Available</p>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="space-y-2">
-                            <button onclick="openLoadSubjectModal({{ member.id }}, '{{ member.firstName|e('js') }} {{ member.lastName|e('js') }}')"
-                                    class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 shadow-md">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                </svg>
-                                Load Subject
-                            </button>
-                            {% if assignedSchedules|length > 0 %}
-                            <button onclick="viewFacultyAssignments({{ member.id }})"
-                                    class="w-full bg-white border-2 border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 hover:border-gray-400 transition-colors flex items-center justify-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                                View Assignments
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% else %}
-                <div class="col-span-full">
-                    <div class="bg-white rounded-xl shadow-md p-12 text-center">
-                        <svg class="w-20 h-20 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-                        <h3 class="mt-4 text-xl font-semibold text-gray-700">No Faculty Members Found</h3>
-                        <p class="mt-2 text-gray-500">There are no faculty members in this department.</p>
-                    </div>
-                </div>
-            {% endfor %}
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900">No Faculty Members Found</h3>
+                                    <p class="mt-1 text-sm text-gray-500">There are no faculty members in this department.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination Footer with spacing -->
+            <div class="px-6 py-6 border-t border-gray-200">
+                <!-- DataTables will insert pagination here -->
+            </div>
         </div>
 
     {% else %}
@@ -286,13 +409,16 @@
                                         <tbody class="bg-white divide-y divide-orange-100" id="schedulesList">
                                             {% for schedule in scheduledSubjects %}
                                                 {% if schedule.faculty is null %}
-                                                    <tr class="hover:bg-orange-100 transition-colors cursor-pointer" 
+                                                    <tr class="unassigned-subject-row hover:bg-orange-100 transition-colors cursor-pointer" 
                                                         data-schedule-id="{{ schedule.id }}"
                                                         data-day-pattern="{{ schedule.dayPattern }}"
                                                         data-start-time="{{ schedule.startTime|date('H:i') }}"
                                                         data-end-time="{{ schedule.endTime|date('H:i') }}"
                                                         data-subject-code="{{ schedule.subject.code }}"
-                                                        data-section="{{ schedule.section }}">
+                                                        data-section="{{ schedule.section }}"
+                                                        data-subject-title="{{ schedule.subject.title }}"
+                                                        data-units="{{ schedule.subject.units }}"
+                                                        data-room-code="{{ schedule.room.code }}">
                                                         <td class="px-3 py-3">
                                                             <input type="checkbox" class="subject-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer" 
                                                                    value="{{ schedule.id }}">
@@ -321,7 +447,6 @@
                             </div>
                             <p class="text-xs text-gray-600 mt-2 text-center">
                                 <span id="selectedSubjectsCount" class="font-semibold text-blue-600">0</span> selected
-                                <span id="selectedSubjectsCount" class="font-semibold text-purple-600">0</span> selected
                             </p>
                         </div>
                     </div>
@@ -390,40 +515,145 @@
 <!-- Department Selection Modal -->
 <div id="departmentSelectionModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="dept-modal-title" role="dialog" aria-modal="true">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" onclick="closeDepartmentSelectionModal()"></div>
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
 
-        <div class="inline-block align-middle bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl sm:w-full">
-            <div class="bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-4">
-                <h3 class="text-xl font-bold text-white" id="dept-modal-title">Select Department</h3>
-                <p class="text-purple-100 text-sm">Choose a department to manage faculty loading</p>
+        <!-- Modal Content -->
+        <div class="inline-block align-middle bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl sm:w-full" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold text-white" id="dept-modal-title">Select Department</h3>
+                        <p class="text-blue-100 text-sm">Choose a department to manage faculty loading</p>
+                    </div>
+                    <button onclick="closeDepartmentSelectionModal()" class="text-white hover:text-gray-200 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
+            <!-- Body -->
             <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                    {% for department in departments %}
-                        <button onclick="window.location.href='{{ path('app_schedule_faculty_loading') }}?department={{ department.id }}'"
-                                class="text-left p-4 border-2 border-gray-200 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all group">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 group-hover:text-purple-700">{{ department.name }}</h4>
-                                    <p class="text-sm text-gray-500 mt-1">{{ department.code }}</p>
-                                    {% if department.college %}
-                                        <p class="text-xs text-gray-400 mt-1">{{ department.college.name }}</p>
-                                    {% endif %}
-                                </div>
-                                <svg class="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </div>
-                        </button>
-                    {% endfor %}
+                <!-- College Filter -->
+                <div class="mb-4">
+                    <label for="collegeFilter" class="block text-sm font-medium text-gray-700 mb-2">Filter by College</label>
+                    <select id="collegeFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Colleges</option>
+                        {% set colleges = [] %}
+                        {% for department in departments %}
+                            {% if department.college %}
+                                {% set collegeId = department.college.id %}
+                                {% if collegeId not in colleges|map(c => c.id) %}
+                                    {% set colleges = colleges|merge([department.college]) %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set sortedColleges = colleges|sort((a, b) => a.name <=> b.name) %}
+                        {% for college in sortedColleges %}
+                            <option value="{{ college.id }}">{{ college.code }} - {{ college.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="departmentLoading" class="hidden py-8 text-center">
+                    <div class="flex flex-col items-center gap-3 text-blue-600">
+                        <svg class="animate-spin h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm font-medium">Loading departments...</span>
+                    </div>
+                </div>
+
+                <!-- Department Grid Container -->
+                <div id="departmentGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                    <!-- Departments will be rendered here by JavaScript -->
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- jQuery (required for DataTables) - Local -->
+<script src="{{ asset('vendor/js/jquery.min.js') }}"></script>
+<!-- DataTables JS - Local -->
+<script src="{{ asset('vendor/js/jquery.dataTables.min.js') }}"></script>
+
 <script>
+// Initialize DataTables
+$(document).ready(function() {
+    // Check if DataTable already exists and destroy it
+    if ($.fn.DataTable.isDataTable('#facultyTable')) {
+        $('#facultyTable').DataTable().destroy();
+    }
+    
+    // Initialize DataTables with full functionality
+    const table = $('#facultyTable').DataTable({
+        paging: true,
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+        lengthChange: false, // Hide default length control
+        info: true,
+        order: [[0, 'asc']], // Sort by faculty name by default
+        columnDefs: [
+            { orderable: false, targets: -1 } // Actions column not sortable
+        ],
+        language: {
+            info: "Showing _START_ to _END_ of _TOTAL_ results",
+            infoEmpty: "Showing 0 to 0 of 0 results",
+            infoFiltered: "(filtered from _MAX_ total results)",
+            zeroRecords: "No matching faculty members found",
+            paginate: {
+                previous: "<",
+                next: ">"
+            }
+        },
+        dom: 'rt<"px-6 py-6 border-t border-gray-200 flex justify-between items-center"<"text-sm text-gray-700"i><"flex items-center gap-2"p>>',
+        drawCallback: function() {
+            // Custom styling for pagination buttons after draw
+            $('.dataTables_paginate .paginate_button').addClass('inline-flex items-center justify-center');
+            $('.dataTables_paginate .paginate_button.current').removeClass('hover:bg-gray-50');
+        }
+    });
+
+    // Connect custom search input to DataTables search
+    $('#searchInput').on('input', function() {
+        table.search(this.value).draw();
+    });
+    
+    // Connect status filter to DataTables
+    $('#statusFilter').on('change', function() {
+        const statusText = $(this).val();
+        table.column(3).search(statusText).draw();
+    });
+    
+    // Connect show filter (page length) to DataTables
+    $('#showFilter').on('change', function() {
+        const length = parseInt($(this).val());
+        table.page.len(length).draw();
+    });
+});
+
+// Store all departments data for filtering
+const allDepartments = [
+    {% for department in departments %}
+    {
+        id: {{ department.id }},
+        name: '{{ department.name|e('js') }}',
+        code: '{{ department.code|e('js') }}',
+        collegeId: {{ department.college ? department.college.id : 0 }},
+        collegeName: '{{ department.college ? department.college.name|e('js') : 'No College' }}',
+        hasCollege: {{ department.college ? 'true' : 'false' }}
+    }{{ loop.last ? '' : ',' }}
+    {% endfor %}
+];
+
+console.log('✓ Departments loaded:', allDepartments.length);
+
 // Faculty data object with all assigned schedules
 const facultyData = {
     {% for member in faculty %}
@@ -690,7 +920,7 @@ function addToUnassignedList(scheduleData) {
     if (!tbody) return;
     
     const row = document.createElement('tr');
-    row.className = 'hover:bg-orange-100 transition-colors cursor-pointer';
+    row.className = 'unassigned-subject-row hover:bg-orange-100 transition-colors cursor-pointer';
     row.dataset.scheduleId = scheduleData.id;
     row.dataset.dayPattern = scheduleData.dayPatternRaw;
     row.dataset.startTime = scheduleData.startTimeRaw;
@@ -881,28 +1111,23 @@ async function confirmLoadSubject() {
             if (result.success) {
                 successCount++;
                 
-                // Find the row and extract schedule data
+                // Find the row and extract schedule data from data attributes
                 const row = document.querySelector(`#schedulesList tr[data-schedule-id="${scheduleId}"]`);
                 if (row) {
-                    // Extract time from the schedule cell
-                    const scheduleCell = row.querySelector('td:nth-child(3)');
-                    const timeText = scheduleCell.querySelector('div:nth-child(2)').textContent.trim();
-                    const [startTime, endTime] = timeText.split(' - ');
-                    
                     const scheduleData = {
                         id: scheduleId,
                         subjectCode: row.dataset.subjectCode,
-                        subjectTitle: scheduleCell.querySelector('div:nth-child(1)').textContent.trim(),
-                        units: parseInt(row.querySelector('td:nth-child(2) .text-xs.text-gray-500').textContent.replace('u', '')),
+                        subjectTitle: row.dataset.subjectTitle,
+                        units: parseInt(row.dataset.units),
                         section: row.dataset.section,
-                        dayPattern: scheduleCell.querySelector('div:nth-child(1)').textContent.trim(),
+                        dayPattern: row.dataset.dayPattern,
                         dayPatternRaw: row.dataset.dayPattern,
-                        startTime: startTime,
+                        startTime: row.querySelector('td:nth-child(3) div:nth-child(2)').textContent.split(' - ')[0].trim(),
                         startTimeRaw: row.dataset.startTime,
-                        endTime: endTime,
+                        endTime: row.querySelector('td:nth-child(3) div:nth-child(2)').textContent.split(' - ')[1].trim(),
                         endTimeRaw: row.dataset.endTime,
-                        room: scheduleCell.querySelector('div:nth-child(3)').textContent.trim(),
-                        roomCode: scheduleCell.querySelector('div:nth-child(3)').textContent.trim()
+                        room: row.dataset.roomCode,
+                        roomCode: row.dataset.roomCode
                     };
                     
                     // Add to faculty data
@@ -1056,17 +1281,178 @@ function generateTeachingLoadPDF() {
     }
 }
 
+// ============================================================================
+// DEPARTMENT SELECTION MODAL
+// ============================================================================
+
 // Open Department Selection Modal
 function openDepartmentSelectionModal() {
-    document.getElementById('departmentSelectionModal').classList.remove('hidden');
+    const modal = document.getElementById('departmentSelectionModal');
+    if (!modal) return;
+    
+    modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    
+    // Initialize the filter
+    initializeCollegeFilter();
+    
+    // Render all departments initially
+    renderDepartmentsByCollege('');
+}
+
+// Initialize College Filter
+function initializeCollegeFilter() {
+    const collegeFilter = document.getElementById('collegeFilter');
+    if (!collegeFilter) {
+        console.error('❌ College filter not found');
+        return;
+    }
+    
+    console.log('✓ Initializing college filter');
+    
+    // Remove any existing event listeners by replacing the element
+    const newFilter = collegeFilter.cloneNode(true);
+    collegeFilter.parentNode.replaceChild(newFilter, collegeFilter);
+    
+    // Add change event listener
+    newFilter.addEventListener('change', function() {
+        console.log('🔔 College filter changed to:', this.value);
+        renderDepartmentsByCollege(this.value);
+    });
+}
+
+// Render departments based on selected college filter
+function renderDepartmentsByCollege(selectedCollegeId) {
+    console.log('🎨 renderDepartmentsByCollege called with:', selectedCollegeId, typeof selectedCollegeId);
+    
+    const departmentGrid = document.getElementById('departmentGrid');
+    const loadingEl = document.getElementById('departmentLoading');
+    
+    if (!departmentGrid || !loadingEl) {
+        console.error('❌ Department grid or loading element not found');
+        return;
+    }
+    
+    // Show loading
+    loadingEl.classList.remove('hidden');
+    departmentGrid.classList.add('hidden');
+    
+    // Validate allDepartments exists
+    if (typeof allDepartments === 'undefined' || !Array.isArray(allDepartments)) {
+        console.error('❌ Department data not loaded properly');
+        loadingEl.classList.add('hidden');
+        departmentGrid.classList.remove('hidden');
+        departmentGrid.innerHTML = `
+            <div class="col-span-2 p-8 text-center text-red-500">
+                <p class="font-semibold">Error loading departments</p>
+                <p class="text-sm">Please refresh the page</p>
+            </div>
+        `;
+        return;
+    }
+    
+    console.log('📊 Total departments available:', allDepartments.length);
+    console.log('📊 Sample dept collegeId:', allDepartments[0]?.collegeId, typeof allDepartments[0]?.collegeId);
+    
+    // Filter departments by college
+    let filteredDepartments;
+    if (!selectedCollegeId || selectedCollegeId === '' || selectedCollegeId === '0') {
+        console.log('✓ Showing all departments');
+        filteredDepartments = allDepartments;
+    } else {
+        const selectedId = parseInt(selectedCollegeId);
+        console.log('🔍 Filtering by college ID:', selectedId);
+        filteredDepartments = allDepartments.filter(dept => {
+            const match = dept.collegeId === selectedId;
+            if (match) console.log('  ✓ Match:', dept.name);
+            return match;
+        });
+    }
+    
+    console.log('📊 Filtered departments:', filteredDepartments.length);
+    
+    // Simulate slight delay for smooth loading effect
+    setTimeout(() => {
+        // Hide loading
+        loadingEl.classList.add('hidden');
+        departmentGrid.classList.remove('hidden');
+        
+        // Clear existing content
+        departmentGrid.innerHTML = '';
+        
+        // Show message if no departments found
+        if (filteredDepartments.length === 0) {
+            console.log('⚠️ No departments to display');
+            departmentGrid.innerHTML = `
+                <div class="col-span-2 p-8 text-center text-gray-500">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                    </svg>
+                    <p class="text-sm font-medium">No departments found</p>
+                    <p class="text-xs mt-1">Try selecting a different college or "All Colleges"</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Render department cards
+        console.log('✓ Rendering', filteredDepartments.length, 'department cards');
+        filteredDepartments.forEach(dept => {
+            const card = createDepartmentCard(dept);
+            departmentGrid.appendChild(card);
+        });
+        console.log('✓ Rendering complete');
+    }, 200); // 200ms delay for smooth loading effect
+}
+
+// Create a department card element
+function createDepartmentCard(dept) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'department-card text-left p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all group';
+    button.onclick = function() {
+        window.location.href = '{{ path('app_schedule_faculty_loading') }}?department=' + dept.id;
+    };
+    
+    const collegeInfo = dept.hasCollege 
+        ? `<p class="text-xs text-gray-400 mt-1">${escapeHtml(dept.collegeName)}</p>`
+        : '<p class="text-xs text-gray-400 mt-1 italic">No College</p>';
+    
+    button.innerHTML = `
+        <div class="flex items-center justify-between">
+            <div>
+                <h4 class="font-semibold text-gray-900 group-hover:text-blue-700">${escapeHtml(dept.name)}</h4>
+                <p class="text-sm text-gray-500 mt-1">${escapeHtml(dept.code)}</p>
+                ${collegeInfo}
+            </div>
+            <svg class="w-6 h-6 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </div>
+    `;
+    
+    return button;
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Close Department Selection Modal
 function closeDepartmentSelectionModal() {
-    document.getElementById('departmentSelectionModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
+    const modal = document.getElementById('departmentSelectionModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
 }
+
+// ============================================================================
+// PAGE INITIALIZATION
+// ============================================================================
 
 // Auto-show department selection modal if no department selected
 {% if not selectedDepartment %}
@@ -1083,9 +1469,10 @@ function attachCheckboxListeners() {
     });
 }
 
-// Attach event listeners on page load
+// Initialize page on load
 document.addEventListener('DOMContentLoaded', function() {
     attachCheckboxListeners();
+    console.log('✓ Faculty Loading page ready');
 });
 </script>
 

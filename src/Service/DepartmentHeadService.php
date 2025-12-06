@@ -8,6 +8,7 @@ use App\Repository\UserRepository;
 use App\Repository\CurriculumRepository;
 use App\Repository\DepartmentRepository;
 use App\Repository\RoomRepository;
+use App\Repository\ScheduleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
@@ -17,6 +18,7 @@ class DepartmentHeadService
     private CurriculumRepository $curriculumRepository;
     private DepartmentRepository $departmentRepository;
     private RoomRepository $roomRepository;
+    private ScheduleRepository $scheduleRepository;
     private EntityManagerInterface $entityManager;
 
     public function __construct(
@@ -24,12 +26,14 @@ class DepartmentHeadService
         CurriculumRepository $curriculumRepository,
         DepartmentRepository $departmentRepository,
         RoomRepository $roomRepository,
+        ScheduleRepository $scheduleRepository,
         EntityManagerInterface $entityManager
     ) {
         $this->userRepository = $userRepository;
         $this->curriculumRepository = $curriculumRepository;
         $this->departmentRepository = $departmentRepository;
         $this->roomRepository = $roomRepository;
+        $this->scheduleRepository = $scheduleRepository;
         $this->entityManager = $entityManager;
     }
 
@@ -110,6 +114,178 @@ class DepartmentHeadService
             ->getQuery()
             ->getSingleScalarResult();
 
+        // Get schedule statistics for this department
+        $totalSchedules = $this->scheduleRepository->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->join('s.subject', 'subj')
+            ->where('subj.department = :deptId')
+            ->setParameter('deptId', $departmentId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $activeSchedules = $this->scheduleRepository->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->join('s.subject', 'subj')
+            ->where('subj.department = :deptId')
+            ->andWhere('s.status = :status')
+            ->setParameter('deptId', $departmentId)
+            ->setParameter('status', 'active')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $conflictedSchedules = $this->scheduleRepository->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->join('s.subject', 'subj')
+            ->where('subj.department = :deptId')
+            ->andWhere('s.isConflicted = :conflicted')
+            ->setParameter('deptId', $departmentId)
+            ->setParameter('conflicted', true)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Get room statistics
+        $totalRooms = $this->roomRepository->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->where('r.department = :deptId')
+            ->setParameter('deptId', $departmentId)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Calculate room utilization (percentage of rooms with active schedules)
+        $roomsWithSchedules = $this->scheduleRepository->createQueryBuilder('s')
+            ->select('COUNT(DISTINCT r.id)')
+            ->join('s.room', 'r')
+            ->join('s.subject', 'subj')
+            ->where('subj.department = :deptId')
+            ->andWhere('s.status = :status')
+            ->setParameter('deptId', $departmentId)
+            ->setParameter('status', 'active')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        $roomUtilization = $totalRooms > 0 ? round(($roomsWithSchedules / $totalRooms) * 100) : 0;
+
+        // Get all active faculty in the department
+        $allFaculty = $this->userRepository->createQueryBuilder('u')
+            ->select('u')
+            ->where('u.role = :role')
+            ->andWhere('u.department = :deptId')
+            ->andWhere('u.isActive = :active')
+            ->setParameter('role', 3)
+            ->setParameter('deptId', $departmentId)
+            ->setParameter('active', true)
+            ->getQuery()
+            ->getResult();
+
+        // Calculate teaching loads for all faculty
+        $facultyLoads = [];
+        foreach ($allFaculty as $faculty) {
+            $schedules = $this->scheduleRepository->createQueryBuilder('s')
+                ->where('s.faculty = :facultyId')
+                ->andWhere('s.status = :status')
+                ->setParameter('facultyId', $faculty->getId())
+                ->setParameter('status', 'active')
+                ->getQuery()
+                ->getResult();
+
+            $totalHours = 0;
+            foreach ($schedules as $schedule) {
+                $start = $schedule->getStartTime();
+                $end = $schedule->getEndTime();
+                if ($start && $end) {
+                    $diff = $start->diff($end);
+                    $hours = $diff->h + ($diff->i / 60);
+                    
+                    // Count days in pattern
+                    $dayPattern = $schedule->getDayPattern();
+                    $daysPerWeek = 0;
+                    if ($dayPattern) {
+                        $daysPerWeek = strlen(str_replace(['M', 'T', 'W', 'H', 'F', 'S'], '', $dayPattern)) !== strlen($dayPattern) 
+                            ? substr_count($dayPattern, ',') + 1 
+                            : 1;
+                    }
+                    
+                    $totalHours += $hours * $daysPerWeek;
+                }
+            }
+
+            $facultyLoads[] = [
+                'faculty' => $faculty,
+                'current_load' => round($totalHours, 1),
+                'max_load' => 21,
+                'percentage' => $totalHours > 0 ? round(($totalHours / 21) * 100) : 0
+            ];
+        }
+
+        // Sort faculty by workload percentage (highest first) to show most loaded faculty
+        usort($facultyLoads, function($a, $b) {
+            return $b['percentage'] <=> $a['percentage'];
+        });
+
+        // Limit to top 5 faculty by workload for dashboard display
+        $facultyLoads = array_slice($facultyLoads, 0, 5);
+
+        // Gather recent activities from multiple sources
+        $recentActivities = [];
+
+        // Add recent faculty additions
+        foreach ($recentFaculty as $faculty) {
+            $recentActivities[] = [
+                'type' => 'faculty_added',
+                'title' => 'New faculty added',
+                'description' => $faculty->getFirstName() . ' ' . $faculty->getLastName() . ' - ' . $department->getName(),
+                'date' => $faculty->getCreatedAt(),
+                'icon' => 'user-add'
+            ];
+        }
+
+        // Add recent schedules
+        $recentSchedules = $this->scheduleRepository->createQueryBuilder('s')
+            ->join('s.subject', 'subj')
+            ->where('subj.department = :deptId')
+            ->setParameter('deptId', $departmentId)
+            ->orderBy('s.createdAt', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($recentSchedules as $schedule) {
+            $recentActivities[] = [
+                'type' => 'schedule_created',
+                'title' => 'Schedule created',
+                'description' => $schedule->getSubject()->getCode() . ' - ' . $schedule->getSubject()->getTitle(),
+                'date' => $schedule->getCreatedAt(),
+                'icon' => 'calendar'
+            ];
+        }
+
+        // Add recent curricula updates
+        $recentCurricula = $this->curriculumRepository->createQueryBuilder('c')
+            ->where('c.department = :deptId')
+            ->setParameter('deptId', $departmentId)
+            ->orderBy('c.updatedAt', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getResult();
+
+        foreach ($recentCurricula as $curriculum) {
+            $recentActivities[] = [
+                'type' => $curriculum->isPublished() ? 'curriculum_published' : 'curriculum_updated',
+                'title' => $curriculum->isPublished() ? 'Curriculum published' : 'Curriculum updated',
+                'description' => $curriculum->getDisplayName(),
+                'date' => $curriculum->getUpdatedAt(),
+                'icon' => 'document'
+            ];
+        }
+
+        // Sort all activities by date (most recent first)
+        usort($recentActivities, function($a, $b) {
+            return $b['date'] <=> $a['date'];
+        });
+
+        // Limit to 10 most recent activities
+        $recentActivities = array_slice($recentActivities, 0, 10);
+
         return [
             'department' => $department,
             'total_faculty' => $totalFaculty,
@@ -121,6 +297,14 @@ class DepartmentHeadService
             'total_curricula' => $totalCurricula,
             'published_curricula' => $publishedCurricula,
             'draft_curricula' => $totalCurricula - $publishedCurricula,
+            'total_schedules' => $totalSchedules,
+            'active_schedules' => $activeSchedules,
+            'conflicted_schedules' => $conflictedSchedules,
+            'pending_schedules' => $totalSchedules - $activeSchedules,
+            'total_rooms' => $totalRooms,
+            'room_utilization' => $roomUtilization,
+            'faculty_loads' => $facultyLoads,
+            'recent_activities' => $recentActivities,
         ];
     }
 

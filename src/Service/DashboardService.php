@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Repository\UserRepository;
 use App\Repository\CurriculumRepository;
 use App\Repository\RoomRepository;
+use App\Repository\ActivityLogRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class DashboardService
@@ -12,17 +13,20 @@ class DashboardService
     private UserRepository $userRepository;
     private CurriculumRepository $curriculumRepository;
     private RoomRepository $roomRepository;
+    private ActivityLogRepository $activityLogRepository;
     private EntityManagerInterface $entityManager;
 
     public function __construct(
         UserRepository $userRepository, 
         CurriculumRepository $curriculumRepository,
         RoomRepository $roomRepository,
+        ActivityLogRepository $activityLogRepository,
         EntityManagerInterface $entityManager
     ) {
         $this->userRepository = $userRepository;
         $this->curriculumRepository = $curriculumRepository;
         $this->roomRepository = $roomRepository;
+        $this->activityLogRepository = $activityLogRepository;
         $this->entityManager = $entityManager;
     }
 
@@ -84,6 +88,9 @@ class DashboardService
         // Get room statistics
         $roomStats = $this->roomRepository->getStatistics();
 
+        // Get recent activities
+        $recentActivities = $this->activityLogRepository->findRecentActivities(15);
+
         return [
             'total_users' => $totalUsers,
             'admin_count' => $adminCount,
@@ -102,6 +109,8 @@ class DashboardService
             'total_rooms' => $roomStats['total'],
             'available_rooms' => $roomStats['available'],
             'room_stats' => $roomStats,
+            // Activity data
+            'recent_activities' => $recentActivities,
             'system_stats' => [
                 'database_status' => 'healthy',
                 'api_status' => 'running',

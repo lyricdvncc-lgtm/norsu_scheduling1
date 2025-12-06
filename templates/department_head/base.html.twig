@@ -271,8 +271,8 @@
                             System
                         </h3>
                         <div class="space-y-1">
-                            <a href="#" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-3 text-sm font-medium rounded-lg">
-                                <svg class="text-gray-400 group-hover:text-gray-500 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <a href="{{ path('department_head_settings') }}" class="nav-item {% if app.request.get('_route') == 'department_head_settings' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if app.request.get('_route') != 'department_head_settings' %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                <svg class="{% if app.request.get('_route') == 'department_head_settings' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
@@ -407,8 +407,8 @@
                                 System
                             </h3>
                             <div class="space-y-1">
-                                <a href="#" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-3 text-sm font-medium rounded-lg">
-                                    <svg class="text-gray-400 group-hover:text-gray-500 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="{{ path('department_head_settings') }}" class="nav-item {% if app.request.get('_route') == 'department_head_settings' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if app.request.get('_route') != 'department_head_settings' %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                    <svg class="{% if app.request.get('_route') == 'department_head_settings' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     </svg>
@@ -442,7 +442,7 @@
                             </svg>
                             <div class="text-left">
                                 <p class="text-xs font-medium text-blue-200 uppercase tracking-wide">Department</p>
-                                <p class="text-sm font-bold text-white">{{ dashboard_data.department.name }}</p>
+                                <p class="text-sm font-bold text-white">{{ department is defined ? department.name : dashboard_data.department.name }}</p>
                             </div>
                         </div>
                         
@@ -478,7 +478,7 @@
                                 <div class="flex items-center space-x-3">
                                     <div class="hidden md:block text-left">
                                         <p class="text-sm font-medium text-gray-700">{{ app.user.firstName }} {{ app.user.lastName }}</p>
-                                        <p class="text-xs text-gray-500">Department Head - {{ dashboard_data.department.name }}</p>
+                                        <p class="text-xs text-gray-500">Department Head - {{ department is defined ? department.name : dashboard_data.department.name }}</p>
                                     </div>
                                     <button @click.stop="open = !open" type="button" class="flex text-sm bg-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                                         <div class="h-10 w-10 rounded-full gradient-bg flex items-center justify-center">

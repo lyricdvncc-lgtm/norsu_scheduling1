@@ -221,8 +221,9 @@
 
         codeInput.addEventListener('input', function() {
             clearTimeout(checkTimeout);
-            const code = this.value.trim().toUpperCase();
-            this.value = code; // Force uppercase
+            // Remove any non-alphanumeric characters, convert to uppercase, and trim
+            let code = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            this.value = code; // Force uppercase and remove invalid chars
 
             if (code.length >= 2) {
                 checkTimeout = setTimeout(() => {
@@ -231,6 +232,12 @@
             } else {
                 codeAvailability.classList.add('hidden');
             }
+        });
+
+        // Additional validation on form submit to ensure clean data
+        document.getElementById('college-form').addEventListener('submit', function(e) {
+            const code = codeInput.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            codeInput.value = code;
         });
 
         function checkCodeAvailability(code) {

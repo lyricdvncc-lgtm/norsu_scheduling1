@@ -440,10 +440,20 @@
 
 <script>
 $(document).ready(function() {
+    // Check if table has no rows
+    const hasNoRows = $('#usersTable tbody tr td[colspan]').length > 0;
+    if (hasNoRows) {
+        console.log('No users to display - DataTables not initialized');
+        return;
+    }
+    
     // Check if DataTable already exists and destroy it
     if ($.fn.DataTable.isDataTable('#usersTable')) {
         $('#usersTable').DataTable().destroy();
     }
+    
+    // Count actual columns in the table header
+    const columnCount = $('#usersTable thead tr th').length;
     
     // Initialize DataTables with full functionality
     const table = $('#usersTable').DataTable({
@@ -453,6 +463,7 @@ $(document).ready(function() {
         lengthChange: true, // Show "Show X entries" dropdown
         info: true, // Show "Showing 1 to X of Y entries" text
         order: [[0, 'asc']], // Sort by username (first column) by default
+        columns: Array(columnCount).fill(null).map((_, i) => ({ orderable: i !== columnCount - 1 })),
         columnDefs: [
             { orderable: false, targets: -1 } // Actions column not sortable
         ],

@@ -397,18 +397,15 @@ class TeachingLoadPdfService
         // Row 3: Total Hours (left column only)
         $pdf->Cell($leftColWidth, $rowHeight, 'Total No. of Hrs./Week: ' . number_format($totals['totalHours'], 0), 0, 1, 'L');
         
-        // Row 4: Other Designation (spans both columns) - with fillable field
-        $y = $pdf->GetY();
-        $pdf->Cell(70, $rowHeight, 'Other Designation/Special Assignments:', 0, 0, 'L');
-        // Add fillable text field for Other Designation
-        $pdf->TextField('other_designation', 120, $rowHeight, ['strokeColor' => [200, 200, 200], 'lineWidth' => 0.3], [], 70 + $pdf->GetX(), $y);
-        $pdf->Ln($rowHeight);
+        // Row 4: Other Designation (spans both columns)
+        $pdf->Cell(0, $rowHeight, 'Other Designation/Special Assignments:', 0, 1, 'L');
         
         // Row 5: Highest Educational Attainment (spans both columns) - with fillable field
         $y = $pdf->GetY();
-        $pdf->Cell(70, $rowHeight, 'Highest Educational Attainment:', 0, 0, 'L');
+        $pdf->Cell(55, $rowHeight, 'Highest Educational Attainment: ', 0, 0, 'L');
+        $x = $pdf->GetX();
         // Add fillable text field for Educational Attainment
-        $pdf->TextField('educational_attainment', 120, $rowHeight, ['strokeColor' => [200, 200, 200], 'lineWidth' => 0.3], [], 70 + $pdf->GetX(), $y);
+        $pdf->TextField('educational_attainment', 135, $rowHeight, ['strokeColor' => [200, 200, 200], 'lineWidth' => 0.3], [], $x, $y);
         $pdf->Ln($rowHeight);
         
         $pdf->Ln(3);

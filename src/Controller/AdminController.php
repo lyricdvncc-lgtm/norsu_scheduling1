@@ -2196,7 +2196,29 @@ class AdminController extends AbstractController
 
         // Determine the back URL based on referer or user role
         $backUrl = $request->headers->get('referer');
-        if (!$backUrl || !str_contains($backUrl, '/admin/users/')) {
+        
+        // Parse the referer to check if it's a valid user list page
+        $validListPages = [
+            '/admin/users/all',
+            '/admin/users/administrators',
+            '/admin/users/department-heads',
+            '/admin/users/faculty',
+            '/admin/users/create',
+            '/admin/users/' . $id . '/edit'
+        ];
+        
+        $isValidReferer = false;
+        if ($backUrl) {
+            foreach ($validListPages as $validPage) {
+                if (str_contains($backUrl, $validPage)) {
+                    $isValidReferer = true;
+                    break;
+                }
+            }
+        }
+        
+        // If referer is not a valid list/edit/create page, generate appropriate list URL
+        if (!$isValidReferer) {
             $backUrl = match($user->getRole()) {
                 1 => $this->generateUrl('admin_users_administrators'),
                 2 => $this->generateUrl('admin_users_department_heads'),

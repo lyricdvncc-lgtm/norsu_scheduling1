@@ -18,7 +18,7 @@ class RoomSchedulePdfService
     public function generateRoomSchedulePdf(Room $room, ?string $academicYear = null, ?string $semester = null): string
     {
         // Create new PDF document
-        $pdf = new TCPDF('L', PDF_UNIT, 'LEGAL', true, 'UTF-8', false);
+        $pdf = new TCPDF('L', PDF_UNIT, 'LETTER', true, 'UTF-8', false);
 
         // Set document information
         $pdf->SetCreator('Smart Scheduling System');
@@ -30,8 +30,8 @@ class RoomSchedulePdfService
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
 
-        // Set margins
-        $pdf->SetMargins(10, 10, 10);
+        // Set margins (left, top, right)
+        $pdf->SetMargins(17, 10, 10);
         $pdf->SetAutoPageBreak(TRUE, 10);
 
         // Add a page
@@ -109,7 +109,12 @@ class RoomSchedulePdfService
             $details[] = 'Capacity: ' . $room->getCapacity();
         }
         if ($room->getDepartment()) {
-            $details[] = 'Department: ' . $room->getDepartment()->getName();
+            $department = $room->getDepartment();
+            // Use department group name if available, otherwise use department name
+            $deptName = $department->getDepartmentGroup() 
+                ? $department->getDepartmentGroup()->getName() 
+                : $department->getName();
+            $details[] = 'Department: ' . $deptName;
         }
         
         $detailsText = implode(' | ', $details);
@@ -138,18 +143,14 @@ class RoomSchedulePdfService
         $pdf->SetFillColor(41, 128, 185); // Blue background
         $pdf->SetTextColor(255, 255, 255); // White text
         
-        // Column widths (total should be around 335 for legal landscape)
+        // Column widths - adjusted to fit within letter landscape (total ~250)
         $colWidths = [
             'code' => 25,
-            'subject' => 60,
+            'subject' => 85,
             'instructor' => 50,
             'day' => 25,
             'time' => 40,
-            'section' => 20,
-            'students' => 20,
-            'semester' => 20,
-            'year' => 25,
-            'dept' => 50
+            'section' => 20
         ];
         
         $pdf->Cell($colWidths['code'], 7, 'Code', 1, 0, 'C', true);
@@ -157,15 +158,11 @@ class RoomSchedulePdfService
         $pdf->Cell($colWidths['instructor'], 7, 'Instructor', 1, 0, 'C', true);
         $pdf->Cell($colWidths['day'], 7, 'Day', 1, 0, 'C', true);
         $pdf->Cell($colWidths['time'], 7, 'Time', 1, 0, 'C', true);
-        $pdf->Cell($colWidths['section'], 7, 'Section', 1, 0, 'C', true);
-        $pdf->Cell($colWidths['students'], 7, 'Students', 1, 0, 'C', true);
-        $pdf->Cell($colWidths['semester'], 7, 'Semester', 1, 0, 'C', true);
-        $pdf->Cell($colWidths['year'], 7, 'Year', 1, 0, 'C', true);
-        $pdf->Cell($colWidths['dept'], 7, 'Department', 1, 1, 'C', true);
+        $pdf->Cell($colWidths['section'], 7, 'Section', 1, 1, 'C', true);
         
         // Reset text color for content
         $pdf->SetTextColor(0, 0, 0);
-        $pdf->SetFont('helvetica', '', 8);
+        $pdf->SetFont('helvetica', '', 9);
         
         // Table rows
         $fill = false;
@@ -192,28 +189,18 @@ class RoomSchedulePdfService
                 ? ($faculty->getFirstName() . ' ' . $faculty->getLastName())
                 : 'TBA';
             
-            // Department name (truncate if too long)
-            $deptName = $department ? $department->getName() : '';
-            if (strlen($deptName) > 25) {
-                $deptName = substr($deptName, 0, 22) . '...';
-            }
-            
-            // Subject description (truncate if too long)
-            $subjectDesc = $subject ? $subject->getDescription() : '';
-            if (strlen($subjectDesc) > 35) {
-                $subjectDesc = substr($subjectDesc, 0, 32) . '...';
+            // Subject title (truncate if too long)
+            $subjectTitle = $subject ? $subject->getTitle() : '';
+            if (strlen($subjectTitle) > 65) {
+                $subjectTitle = substr($subjectTitle, 0, 62) . '...';
             }
             
             $pdf->Cell($colWidths['code'], 6, $subject ? $subject->getCode() : '', 1, 0, 'L', true);
-            $pdf->Cell($colWidths['subject'], 6, $subjectDesc, 1, 0, 'L', true);
+            $pdf->Cell($colWidths['subject'], 6, $subjectTitle, 1, 0, 'L', true);
             $pdf->Cell($colWidths['instructor'], 6, $instructorName, 1, 0, 'L', true);
             $pdf->Cell($colWidths['day'], 6, $schedule->getDayPattern() ?: '', 1, 0, 'C', true);
             $pdf->Cell($colWidths['time'], 6, $timeRange, 1, 0, 'C', true);
-            $pdf->Cell($colWidths['section'], 6, $schedule->getSection() ?: '', 1, 0, 'C', true);
-            $pdf->Cell($colWidths['students'], 6, (string)($schedule->getEnrolledStudents() ?: '0'), 1, 0, 'C', true);
-            $pdf->Cell($colWidths['semester'], 6, $schedule->getSemester() ?: '', 1, 0, 'C', true);
-            $pdf->Cell($colWidths['year'], 6, $academicYear ? $academicYear->getYear() : '', 1, 0, 'C', true);
-            $pdf->Cell($colWidths['dept'], 6, $deptName, 1, 1, 'L', true);
+            $pdf->Cell($colWidths['section'], 6, $schedule->getSection() ?: '', 1, 1, 'C', true);
             
             $fill = !$fill;
         }

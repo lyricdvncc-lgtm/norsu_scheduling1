@@ -7,6 +7,7 @@ use App\Entity\College;
 use App\Entity\Department;
 use App\Repository\CollegeRepository;
 use App\Repository\DepartmentRepository;
+use App\Repository\UserRepository;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -17,17 +18,21 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Callback;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 class RegistrationFormType extends AbstractType
 {
     private CollegeRepository $collegeRepository;
     private DepartmentRepository $departmentRepository;
+    private UserRepository $userRepository;
 
-    public function __construct(CollegeRepository $collegeRepository, DepartmentRepository $departmentRepository)
+    public function __construct(CollegeRepository $collegeRepository, DepartmentRepository $departmentRepository, UserRepository $userRepository)
     {
         $this->collegeRepository = $collegeRepository;
         $this->departmentRepository = $departmentRepository;
+        $this->userRepository = $userRepository;
     }
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -109,6 +114,17 @@ class RegistrationFormType extends AbstractType
                         'max' => 15,
                         'minMessage' => 'Employee ID must be at least {{ limit }} characters',
                         'maxMessage' => 'Employee ID cannot exceed {{ limit }} characters',
+                    ]),
+                    new Callback([
+                        'callback' => function($value, ExecutionContextInterface $context) {
+                            if ($value) {
+                                $existingUser = $this->userRepository->findOneBy(['employeeId' => $value]);
+                                if ($existingUser) {
+                                    $context->buildViolation('This Employee ID is already registered in the system.')
+                                        ->addViolation();
+                                }
+                            }
+                        }
                     ]),
                 ],
             ])

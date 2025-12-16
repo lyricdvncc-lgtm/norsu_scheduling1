@@ -13,19 +13,36 @@
     
     <style>
         .form-input {
-            @apply appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:text-sm transition duration-200 ease-in-out;
+            @apply appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition duration-200 ease-in-out;
         }
         .form-input:focus {
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
         .btn-primary {
-            @apply w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105;
+            @apply w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200 ease-in-out transform hover:scale-105;
         }
         .form-label {
-            @apply block text-sm font-semibold text-gray-700 mb-2;
+            @apply block text-sm font-semibold text-gray-700 mb-1.5;
         }
         .card {
             @apply bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-2xl;
+        }
+        /* Error message styling */
+        .invalid-feedback {
+            @apply text-red-600 text-sm font-medium mt-1 block;
+        }
+        .invalid-feedback ul {
+            @apply list-none p-0 m-0;
+        }
+        .invalid-feedback li {
+            @apply flex items-start mt-1;
+        }
+        .invalid-feedback li:before {
+            content: "⚠ ";
+            @apply text-red-500 mr-1 font-bold;
+        }
+        .form-input.is-invalid {
+            @apply border-red-500 focus:ring-red-500;
         }
     </style>
 </head>
@@ -63,88 +80,92 @@
             </div>
         </div>
 
-        <div class="sm:mx-auto sm:w-full sm:max-w-lg">
-            <div class="card py-10 px-8 sm:px-10">
-                {{ form_start(registrationForm, {'attr': {'class': 'space-y-6'}}) }}
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="mx-auto w-full max-w-4xl px-4">
+            <div class="card py-6 px-6 sm:px-8">
+                {{ form_start(registrationForm, {'attr': {'class': 'space-y-3'}}) }}
+                    {# Name fields in 3 columns #}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="space-y-2">
                             {{ form_label(registrationForm.firstName, null, {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.firstName, {'attr': {'class': 'form-input', 'placeholder': 'Enter your first name'}}) }}
-                            {{ form_errors(registrationForm.firstName, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.firstName) }}</div>
                         </div>
 
                         <div class="space-y-2">
                             {{ form_label(registrationForm.middleName, null, {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.middleName, {'attr': {'class': 'form-input', 'placeholder': 'Enter your middle name (optional)'}}) }}
-                            {{ form_errors(registrationForm.middleName, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.middleName) }}</div>
                         </div>
 
                         <div class="space-y-2">
                             {{ form_label(registrationForm.lastName, null, {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.lastName, {'attr': {'class': 'form-input', 'placeholder': 'Enter your last name'}}) }}
-                            {{ form_errors(registrationForm.lastName, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.lastName) }}</div>
                         </div>
                     </div>
 
-                    <div class="space-y-2">
-                        {{ form_label(registrationForm.username, null, {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(registrationForm.username, {'attr': {'class': 'form-input', 'placeholder': 'Choose a username'}}) }}
-                        {{ form_errors(registrationForm.username, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                    {# Username and Employee ID in 2 columns #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            {{ form_label(registrationForm.username, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(registrationForm.username, {'attr': {'class': 'form-input', 'placeholder': 'Choose a username'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.username) }}</div>
+                        </div>
+
+                        <div class="space-y-2">
+                            {{ form_label(registrationForm.employeeId, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(registrationForm.employeeId, {'attr': {'class': 'form-input', 'placeholder': 'Enter your employee ID'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.employeeId) }}</div>
+                        </div>
                     </div>
 
-                    <div class="space-y-2">
-                        {{ form_label(registrationForm.employeeId, null, {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(registrationForm.employeeId, {'attr': {'class': 'form-input', 'placeholder': 'Enter your employee ID'}}) }}
-                        {{ form_errors(registrationForm.employeeId, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                    {# Email and Address in 2 columns #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-2">
+                            {{ form_label(registrationForm.email, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(registrationForm.email, {'attr': {'class': 'form-input', 'placeholder': 'Enter your email address'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.email) }}</div>
+                        </div>
+
+                        <div class="space-y-2">
+                            {{ form_label(registrationForm.address, null, {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(registrationForm.address, {'attr': {'class': 'form-input', 'placeholder': 'Enter your address'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.address) }}</div>
+                        </div>
                     </div>
 
-                    <div class="space-y-2">
-                        {{ form_label(registrationForm.email, null, {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(registrationForm.email, {'attr': {'class': 'form-input', 'placeholder': 'Enter your email address'}}) }}
-                        {{ form_errors(registrationForm.email, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
-                    </div>
-
-                    <div class="space-y-2">
-                        {{ form_label(registrationForm.address, null, {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(registrationForm.address, {'attr': {'class': 'form-input', 'placeholder': 'Enter your address'}}) }}
-                        {{ form_errors(registrationForm.address, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {# College and Department in 2 columns #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="space-y-2">
                             {{ form_label(registrationForm.college, null, {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.college, {'attr': {'class': 'form-input', 'id': 'registration_form_college'}}) }}
-                            {{ form_errors(registrationForm.college, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.college) }}</div>
                         </div>
 
                         <div class="space-y-2">
                             {{ form_label(registrationForm.department, null, {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.department, {'attr': {'class': 'form-input', 'id': 'registration_form_department'}}) }}
-                            {{ form_errors(registrationForm.department, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.department) }}</div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {# Password fields in 2 columns #}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="space-y-2">
                             {{ form_label(registrationForm.plainPassword.first, 'Password', {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.plainPassword.first, {'attr': {'class': 'form-input', 'placeholder': 'Create a strong password'}}) }}
-                            {{ form_errors(registrationForm.plainPassword.first, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.plainPassword.first) }}</div>
                         </div>
 
                         <div class="space-y-2">
                             {{ form_label(registrationForm.plainPassword.second, 'Confirm Password', {'label_attr': {'class': 'form-label'}}) }}
                             {{ form_widget(registrationForm.plainPassword.second, {'attr': {'class': 'form-input', 'placeholder': 'Confirm your password'}}) }}
-                            {{ form_errors(registrationForm.plainPassword.second, {'attr': {'class': 'mt-1 text-sm text-red-600'}}) }}
+                            <div class="text-red-600 text-sm font-semibold mt-1">{{ form_errors(registrationForm.plainPassword.second) }}</div>
                         </div>
                     </div>
 
-                    <div class="pt-4">
-                        <button type="submit" class="btn-primary">
-                            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                                <svg class="h-5 w-5 text-white opacity-75" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
-                                </svg>
-                            </span>
+                    <div class="pt-2">
+                        <button type="submit" class="flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 antialiased transition-colors duration-200">
                             Create Faculty Account
                         </button>
                     </div>

@@ -679,16 +679,8 @@ $(document).ready(function() {
         autoWidth: false,
         processing: false, // No processing indicator for instant results
         order: [[0, 'asc']], // Sort by faculty name by default
-        columns: [
-            { orderable: true },  // Faculty Member
-            { orderable: true },  // Employee ID
-            { orderable: true },  // Position
-            { orderable: true },  // Status
-            { orderable: true },  // Date Added
-            { orderable: false }  // Actions
-        ],
         columnDefs: [
-            { orderable: false, targets: -1 } // Actions column not sortable
+            { orderable: false, targets: 5 } // Actions column (index 5) not sortable
         ],
         language: {
             info: "Showing _START_ to _END_ of _TOTAL_ faculty members",

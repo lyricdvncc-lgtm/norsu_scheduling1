@@ -135,11 +135,22 @@
             display: none !important; /* Hide default search - we have custom filters */
         }
 
+        /* === 7. FOOTER CONTAINER === */
+        div.dataTables_wrapper .dataTables_footer_wrapper {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            margin-top: 1rem !important;
+            padding: 1rem !important;
+            background: #f9fafb !important;
+            border-top: 1px solid #e5e7eb !important;
+            border-radius: 0 0 0.5rem 0.5rem !important;
+        }
+
         /* === 7. INFO TEXT (Showing X to Y of Z entries) === */
         div.dataTables_wrapper div.dataTables_info {
             float: left !important;
-            padding-top: 1.25rem !important;
-            padding-bottom: 1rem !important;
+            padding: 0.5rem 0 !important;
             font-size: 0.875rem !important;
             color: #6b7280 !important;
             font-weight: 500 !important;
@@ -150,17 +161,16 @@
         div.dataTables_wrapper div.dataTables_paginate {
             float: right !important;
             text-align: right !important;
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
+            padding: 0 !important;
             margin: 0 !important;
             display: flex !important;
             align-items: center !important;
-            gap: 0.75rem !important;
+            gap: 0.25rem !important;
         }
 
         div.dataTables_wrapper div.dataTables_paginate span {
             display: inline-flex !important;
-            gap: 0.5rem !important;
+            gap: 0.375rem !important;
             align-items: center !important;
         }
 
@@ -174,21 +184,21 @@
             box-sizing: border-box !important;
             min-width: 2.5rem !important;
             height: 2.5rem !important;
-            padding: 0.5rem 0.875rem !important;
-            margin: 0 0.25rem !important;
+            padding: 0.5rem 0.75rem !important;
+            margin: 0 0.125rem !important;
             border-radius: 0.5rem !important;
             border: 1px solid #d1d5db !important;
-            background: white !important;
-            background-color: white !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
             background-image: none !important;
-            color: #4b5563 !important;
+            color: #374151 !important;
             cursor: pointer !important;
             text-decoration: none !important;
             font-size: 0.875rem !important;
             font-weight: 500 !important;
             line-height: 1.25rem !important;
             text-align: center !important;
-            transition: all 0.2s ease-in-out !important;
+            transition: all 0.15s ease !important;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
             vertical-align: middle !important;
             white-space: nowrap !important;
@@ -205,11 +215,11 @@
             color: white !important;
             border-color: #3b82f6 !important;
             font-weight: 600 !important;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4), 0 2px 4px -1px rgba(59, 130, 246, 0.3) !important;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.4) !important;
             cursor: default !important;
         }
 
-        /* Hover State - Light Gray with Blue Border */
+        /* Hover State - Light Background */
         div.dataTables_wrapper div.dataTables_paginate .paginate_button:hover:not(.disabled):not(.current) {
             background: #f3f4f6 !important;
             background-color: #f3f4f6 !important;
@@ -217,30 +227,107 @@
             border-color: #3b82f6 !important;
             color: #3b82f6 !important;
             box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
-            transform: translateY(-1px) !important;
         }
-
+        
         /* Disabled State - Grayed Out and Non-Interactive */
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.disabled,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.disabled:hover,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.disabled:active,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.disabled:link,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.disabled:visited {
-            opacity: 0.5 !important;
+            opacity: 0.4 !important;
             cursor: not-allowed !important;
             pointer-events: none !important;
             color: #9ca3af !important;
-            background: #f9fafb !important;
-            background-color: #f9fafb !important;
+            background: #f3f4f6 !important;
+            background-color: #f3f4f6 !important;
             background-image: none !important;
             border-color: #e5e7eb !important;
             box-shadow: none !important;
             transform: none !important;
         }
 
-        /* Previous/Next Buttons - Distinctive Styling with More Padding */
+        /* Previous/Next Buttons - Premium Design with Icons */
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.previous,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.next,
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.first,
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.last {
+            font-weight: 700 !important;
+            padding: 0.625rem 1.25rem !important;
+            min-width: auto !important;
+            margin: 0 0.5rem !important;
+            border: 2px solid #3b82f6 !important;
+            background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+            color: #3b82f6 !important;
+            box-shadow: 0 2px 6px 0 rgba(59, 130, 246, 0.15), 
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+            letter-spacing: 0.025em !important;
+        }
+        
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.previous:hover:not(.disabled),
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.next:hover:not(.disabled),
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.first:hover:not(.disabled),
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.last:hover:not(.disabled) {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+            color: white !important;
+            border-color: #2563eb !important;
+            box-shadow: 0 4px 10px 0 rgba(59, 130, 246, 0.35), 
+                        inset 0 1px 0 0 rgba(255, 255, 255, 0.3) !important;
+            transform: translateY(-2px) scale(1.03) !important;
+        }
+
+        /* First and Last get extra margin and visual separation */
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.first {
+            margin-right: 1rem !important;
+            border-top-left-radius: 0.75rem !important;
+            border-bottom-left-radius: 0.75rem !important;
+        }
+
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.last {
+            margin-left: 1rem !important;
+            border-top-right-radius: 0.75rem !important;
+            border-bottom-right-radius: 0.75rem !important;
+        }
+        
+        /* Add arrow indicators */
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.previous::before {
+            content: '‹ ' !important;
+            font-weight: 900 !important;
+            font-size: 1.125rem !important;
+            margin-right: 0.25rem !important;
+        }
+        
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.next::after {
+            content: ' ›' !important;
+            font-weight: 900 !important;
+            font-size: 1.125rem !important;
+            margin-left: 0.25rem !important;
+        }
+        
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.first::before {
+            content: '« ' !important;
+            font-weight: 900 !important;
+            font-size: 1rem !important;
+            margin-right: 0.25rem !important;
+        }
+        
+        div.dataTables_wrapper div.dataTables_paginate .paginate_button.last::after {
+            content: ' »' !important;
+            font-weight: 900 !important;
+            font-size: 1rem !important;
+            margin-left: 0.25rem !important;
+        }
+
+        /* Ellipsis - Elegant Visual Separator */
+        div.dataTables_wrapper div.dataTables_paginate .ellipsis {
+            display: inline-flex !important;
+            align-items: center !important;
+            padding: 0.625rem 0.5rem !important;
+            color: #6b7280 !important;
+            margin: 0 0.25rem !important;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+            letter-spacing: 0.1emer div.dataTables_paginate .paginate_button.next,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.first,
         div.dataTables_wrapper div.dataTables_paginate .paginate_button.last {
             font-weight: 600 !important;
@@ -277,25 +364,62 @@
             display: table !important;
             clear: both !important;
         }
-
-        /* === 11. RESPONSIVE === */
-        @media (max-width: 768px) {
-            .dataTables_wrapper .dataTables_length,
+        
+        /* === 10.5 FOOTER VISUAL ENHANCEMENTS === */
+        /* Add decorative gradient line above footer */
+        div.dataTables_wrapper::after {
             .dataTables_wrapper .dataTables_filter {
                 float: none !important;
                 text-align: left !important;
                 margin-bottom: 1rem !important;
             }
 
+            div.dataTables_wrapper .dataTables_footer_wrapper {
+                flex-direction: column !important;
+                gap: 1rem !important;
+                padding: 1rem !important;
+            }
+
             .dataTables_wrapper .dataTables_info,
             .dataTables_wrapper .dataTables_paginate {
                 float: none !important;
                 text-align: center !important;
-                margin-top: 1rem !important;
+                width: 100% !important;
             }
 
             div.dataTables_wrapper div.dataTables_paginate {
                 justify-content: center !important;
+                flex-wrap: wrap !important;
+            }
+            
+            /* Smaller buttons on mobile */
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button {
+                min-width: 2.25rem !important;
+                height: 2.25rem !important;
+                padding: 0.5rem 0.625rem !important;
+                font-size: 0.875rem !important;
+            }
+            
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.previous,
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.next,
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.first,
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.last {
+                padding: 0.5rem 0.875rem !important;
+                font-size: 0.8125rem !important;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            /* Hide First/Last buttons on very small screens */
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.first,
+            div.dataTables_wrapper div.dataTables_paginate .paginate_button.last {
+                display: none !important;
+            }
+            
+            /* Compact info text */
+            div.dataTables_wrapper div.dataTables_info {
+                font-size: 0.8125rem !important;
+                padding: 0.5rem 0.75rem !important;
             }
         }
 
@@ -423,191 +547,535 @@
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="border-b border-gray-200">
             <nav class="-mb-px flex" aria-label="Tabs">
-                <button onclick="showTab('rooms')" id="tab-rooms" class="tab-button w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                <button onclick="showTab('rooms')" id="tab-rooms" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
                     <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                     </svg>
                     Room History ({{ roomsData|length }})
                 </button>
-                <button onclick="showTab('faculty')" id="tab-faculty" class="tab-button w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                <button onclick="showTab('faculty')" id="tab-faculty" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
                     <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
                     Faculty History ({{ facultyData|length }})
                 </button>
+                <button onclick="showTab('subjects')" id="tab-subjects" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                    <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    Subject Offerings ({{ subjectsData|length }})
+                </button>
             </nav>
         </div>
 
         {# Room History Tab #}
-        <div id="content-rooms" class="tab-content">
+        <div id="content-rooms" class="tab-content" x-data="roomsTableData()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-gray-900">Room Usage History</h2>
-                    {# Debug: {{ roomsData|length }} rooms found #}
-                    {% if roomsData|length > 0 %}
-                    <a href="{{ path('admin_history') ~ '?export=rooms' ~ (selectedDepartment ? '&department=' ~ selectedDepartment : '') ~ (selectedYear ? '&year=' ~ selectedYear : '') ~ (selectedSemester ? '&semester=' ~ selectedSemester : '') ~ (searchTerm ? '&search=' ~ searchTerm : '') }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
-                        <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Export All Rooms (CSV)
-                    </a>
-                    {% endif %}
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Room Usage History</h2>
+                        <p class="text-sm text-gray-500 mt-1" x-text="`Showing ${filteredRooms.length} of ${rooms.length} rooms`"></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="exportRoomsCsv()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
+                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span x-text="filteredRooms.length === rooms.length ? 'Export CSV' : `Export (${filteredRooms.length}) CSV`"></span>
+                        </button>
+                        <button @click="exportRoomsPdf()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            <span x-text="filteredRooms.length === rooms.length ? 'Export PDF' : `Export (${filteredRooms.length}) PDF`"></span>
+                        </button>
+                    </div>
                 </div>
 
-                {% if roomsData|length == 0 %}
-                <div class="text-center py-12 bg-gray-50 rounded-lg">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No rooms found</h3>
-                    <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
-                </div>
-                {% else %}
-                <div class="overflow-x-auto">
-                    <table id="roomsTable" class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule Count</th>
-                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for item in roomsData %}
-                            {% set room = item[0] %}
-                            {% set scheduleCount = item.scheduleCount %}
-                            {% set departments = item.departments|default('') %}
-                            {% set years = item.years|default('') %}
-                            {% set semesters = item.semesters|default('') %}
-                            <tr class="hover:bg-gray-50" data-departments="{{ departments }}" data-years="{{ years }}" data-semesters="{{ semesters }}" data-room-name="{{ room.name }}">
-                                {# DEBUG: Room {{ room.name }} - Depts: {{ departments }} | Years: {{ years }} | Sems: {{ semesters }} #}
-                                <td class="px-6 py-4">
-                                    <div class="text-sm font-medium">{{ room.name }}</div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900">{{ room.building }}</div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900">{{ room.capacity }}</div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                        {{ scheduleCount }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-right text-sm font-medium">
-                                    <a href="{{ path('admin_rooms_history', {id: room.id}) }}" class="text-teal-600 hover:text-teal-900 mr-3">
-                                        View Details
-                                    </a>
-                                    <a href="{{ path('admin_rooms_history_export', {id: room.id}) }}" class="text-green-600 hover:text-green-900">
-                                        Export
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% endif %}
+                <template x-if="filteredRooms.length === 0">
+                    <div class="text-center py-12 bg-gray-50 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No rooms found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                    </div>
+                </template>
+
+                <template x-if="filteredRooms.length > 0">
+                    <div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Room</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Building</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule Count</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="(room, index) in paginatedRooms" :key="room.id">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-medium" x-text="room.name"></div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900" x-text="room.building"></div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm text-gray-900" x-text="room.capacity"></div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800" x-text="room.scheduleCount"></span>
+                                            </td>
+                                            <td class="px-6 py-4 text-right text-sm font-medium">
+                                                <a :href="`{{ path('admin_rooms_history', {id: 0}) }}`.replace('/0', '/' + room.id)" class="text-teal-600 hover:text-teal-900 mr-3">
+                                                    View Details
+                                                </a>
+                                                <a :href="`{{ path('admin_rooms_history_export', {id: 0}) }}`.replace('/0', '/' + room.id)" class="text-green-600 hover:text-green-900">
+                                                    Export
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {# Pagination #}
+                        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button @click="previousPage()" :disabled="currentPage === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Previous
+                                </button>
+                                <button @click="nextPage()" :disabled="currentPage === totalPages" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Showing
+                                        <span class="font-medium" x-text="startIndex + 1"></span>
+                                        to
+                                        <span class="font-medium" x-text="Math.min(endIndex, filteredRooms.length)"></span>
+                                        of
+                                        <span class="font-medium" x-text="filteredRooms.length"></span>
+                                        results
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button @click="previousPage()" :disabled="currentPage === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span class="sr-only">Previous</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <template x-for="page in visiblePages" :key="page">
+                                            <button @click="goToPage(page)" :class="{'z-10 bg-teal-50 border-teal-500 text-teal-600': page === currentPage, 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50': page !== currentPage}" class="relative inline-flex items-center px-4 py-2 border text-sm font-medium" x-text="page"></button>
+                                        </template>
+                                        <button @click="nextPage()" :disabled="currentPage === totalPages" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span class="sr-only">Next</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
 
         {# Faculty History Tab #}
-        <div id="content-faculty" class="tab-content hidden">
+        <div id="content-faculty" class="tab-content hidden" x-data="facultyTableData()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-gray-900">Faculty Teaching History</h2>
-                    {# Debug: {{ facultyData|length }} faculty found #}
-                    {% if facultyData|length > 0 %}
-                    <a href="{{ path('admin_history') ~ '?export=faculty' ~ (selectedDepartment ? '&department=' ~ selectedDepartment : '') ~ (selectedYear ? '&year=' ~ selectedYear : '') ~ (selectedSemester ? '&semester=' ~ selectedSemester : '') ~ (searchTerm ? '&search=' ~ searchTerm : '') }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
-                        <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Export All Faculty (CSV)
-                    </a>
-                    {% endif %}
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">Faculty Teaching History</h2>
+                        <p class="text-sm text-gray-500 mt-1" x-text="`Showing ${filteredFaculty.length} of ${faculty.length} faculty members`"></p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="exportFacultyCsv()" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition">
+                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span x-text="filteredFaculty.length === faculty.length ? 'Export CSV' : `Export (${filteredFaculty.length}) CSV`"></span>
+                        </button>
+                        <button @click="exportFacultyPdf()" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition">
+                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            <span x-text="filteredFaculty.length === faculty.length ? 'Export PDF' : `Export (${filteredFaculty.length}) PDF`"></span>
+                        </button>
+                    </div>
                 </div>
 
-                {% if facultyData|length == 0 %}
-                <div class="text-center py-12 bg-gray-50 rounded-lg">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">No faculty found</h3>
-                    <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                <template x-if="filteredFaculty.length === 0">
+                    <div class="text-center py-12 bg-gray-50 rounded-lg">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No faculty found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                    </div>
+                </template>
+
+                <template x-if="filteredFaculty.length > 0">
+                    <div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teaching Load</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="(member, index) in paginatedFaculty" :key="member.id">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="flex items-center">
+                                                    <div class="flex-shrink-0 h-10 w-10">
+                                                        <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                                                            <span class="text-purple-700 font-medium text-sm" x-text="member.initials"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-4">
+                                                        <div class="text-sm font-medium text-gray-900" x-text="member.fullName"></div>
+                                                        <div class="text-sm text-gray-500" x-text="member.position"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900" x-text="member.employeeId"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm text-gray-900" x-text="member.departmentName || 'No Department'"></div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <div class="text-sm">
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800" x-text="member.totalUnits + ' units'"></span>
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 ml-1" x-text="member.scheduleCount + ' subjects'"></span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a :href="`{{ path('admin_users_faculty_history', {id: 0}) }}`.replace('/0', '/' + member.id)" class="text-teal-600 hover:text-teal-900 mr-3">
+                                                    View Details
+                                                </a>
+                                                <a :href="`{{ path('admin_users_faculty_history_export', {id: 0}) }}`.replace('/0', '/' + member.id)" class="text-green-600 hover:text-green-900">
+                                                    Export
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {# Pagination #}
+                        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 mt-4">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button @click="previousPage()" :disabled="currentPage === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Previous
+                                </button>
+                                <button @click="nextPage()" :disabled="currentPage === totalPages" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Showing
+                                        <span class="font-medium" x-text="startIndex + 1"></span>
+                                        to
+                                        <span class="font-medium" x-text="Math.min(endIndex, filteredFaculty.length)"></span>
+                                        of
+                                        <span class="font-medium" x-text="filteredFaculty.length"></span>
+                                        results
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button @click="previousPage()" :disabled="currentPage === 1" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span class="sr-only">Previous</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                        <template x-for="page in visiblePages" :key="page">
+                                            <button @click="goToPage(page)" :class="{'z-10 bg-teal-50 border-teal-500 text-teal-600': page === currentPage, 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50': page !== currentPage}" class="relative inline-flex items-center px-4 py-2 border text-sm font-medium" x-text="page"></button>
+                                        </template>
+                                        <button @click="nextPage()" :disabled="currentPage === totalPages" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <span class="sr-only">Next</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        {# Subjects Tab #}
+        <div id="content-subjects" class="tab-content hidden">
+            <div class="p-6">
+                <div class="mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Subject Offerings Report</h2>
+                    
+                    {# Export Controls #}
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-start gap-2">
+                                    <svg class="w-5 h-5 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-700 mb-1">PDF Export Preview</p>
+                                        <p class="text-xs text-gray-600 mb-2">
+                                            <svg class="inline-block w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            Use the filters above to select Department, Year, and Semester
+                                        </p>
+                                        <div id="active-filters-badge" class="flex flex-wrap gap-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex-shrink-0">
+                                <button id="exportSubjectsPdfBtn" 
+                                        onclick="exportSubjectsPdf()"
+                                        class="inline-flex items-center px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-lg hover:shadow-xl transform hover:scale-105">
+                                    <svg class="h-6 w-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span id="export-button-text-subjects">Export PDF</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                {% else %}
-                <div class="overflow-x-auto">
-                    <table id="facultyTable" class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Faculty Name</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teaching Load</th>
-                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            {% for item in facultyData %}
-                            {% set faculty = item[0] %}
-                            {% set scheduleCount = item.scheduleCount %}
-                            {% set totalUnits = item.totalUnits ?? 0 %}
-                            {% set departments = item.departments|default('') %}
-                            {% set years = item.years|default('') %}
-                            {% set semesters = item.semesters|default('') %}
-                            <tr class="hover:bg-gray-50" data-departments="{{ departments }}" data-years="{{ years }}" data-semesters="{{ semesters }}">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="flex-shrink-0 h-10 w-10">
-                                            <div class="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                                <span class="text-purple-700 font-medium text-sm">{{ faculty.firstName|first }}{{ faculty.lastName|first }}</span>
-                                            </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" 
+                     x-data="subjectsTableData()" x-init="init()" id="subjectsTableAlpine">
+                    
+                    <!-- Table Controls -->
+                    <div class="p-4 border-b border-gray-200">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <!-- Search (uses global search) -->
+                            <div class="flex-1 max-w-md">
+                                <div class="text-sm text-gray-600 italic">
+                                    <svg class="inline-block h-4 w-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Use the global filters above to search and filter subjects
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <!-- Entries per page -->
+                                <div class="flex items-center gap-2">
+                                    <label for="perPage" class="text-sm font-medium text-gray-700">Show:</label>
+                                    <select x-model.number="perPage" 
+                                            @change="changePerPage()"
+                                            id="perPage" 
+                                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span class="text-sm text-gray-700">entries</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if subjectsData|length == 0 %}
+                    <div class="text-center py-12 bg-gray-50">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No subjects found</h3>
+                        <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                    </div>
+                    {% else %}
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th @click="sortBy('code')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Code
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'code' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'code' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
                                         </div>
-                                        <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">{{ faculty.firstName }} {{ faculty.lastName }}</div>
-                                            <div class="text-sm text-gray-500">{{ faculty.position }}</div>
+                                    </th>
+                                    <th @click="sortBy('title')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Subject Title
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'title' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'title' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
                                         </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ faculty.employeeId }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">
-                                        {% if faculty.department %}
-                                            {{ faculty.department.name }}
-                                        {% else %}
-                                            <span class="text-gray-400">No Department</span>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            {{ totalUnits }} units
-                                        </span>
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 ml-1">
-                                            {{ scheduleCount }} subjects
-                                        </span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <a href="{{ path('admin_users_faculty_history', {id: faculty.id}) }}" class="text-teal-600 hover:text-teal-900 mr-3">
-                                        View Details
-                                    </a>
-                                    <a href="{{ path('admin_users_faculty_history_export', {id: faculty.id}) }}" class="text-green-600 hover:text-green-900">
-                                        Export
-                                    </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                    </th>
+                                    <th @click="sortBy('department')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Department
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'department' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'department' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
+                                        </div>
+                                    </th>
+                                    <th @click="sortBy('units')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Units
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'units' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'units' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th @click="sortBy('timesOffered')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Times Offered
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'timesOffered' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'timesOffered' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
+                                        </div>
+                                    </th>
+                                    <th @click="sortBy('facultyCount')" scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        <div class="flex items-center gap-2">
+                                            Faculty Count
+                                            <svg class="w-4 h-4" :class="{ 'text-blue-600': sortField === 'facultyCount' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="sortField === 'facultyCount' && sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'"/>
+                                            </svg>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="subject in paginatedData" :key="subject.id">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900" x-text="subject.code"></div>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm text-gray-900" x-text="subject.title"></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900" x-text="subject.department || 'No Department'"></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900" x-text="subject.units"></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" 
+                                                  :class="subject.type === 'lecture' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'"
+                                                  x-text="subject.type.charAt(0).toUpperCase() + subject.type.slice(1)"></span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                <span x-text="subject.timesOffered"></span>x
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm text-gray-900"><span x-text="subject.facultyCount"></span> faculty</div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button @click="prevPage()" 
+                                        :disabled="currentPage === 1"
+                                        :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
+                                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Previous
+                                </button>
+                                <button @click="nextPage()" 
+                                        :disabled="currentPage === totalPages"
+                                        :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
+                                        class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Showing
+                                        <span class="font-medium" x-text="startEntry"></span>
+                                        to
+                                        <span class="font-medium" x-text="endEntry"></span>
+                                        of
+                                        <span class="font-medium" x-text="totalFiltered"></span>
+                                        results
+                                        <template x-if="totalFiltered !== allData.length">
+                                            <span class="text-gray-500">(filtered from <span x-text="allData.length"></span> total)</span>
+                                        </template>
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                        <button @click="prevPage()" 
+                                                :disabled="currentPage === 1"
+                                                :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
+                                                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <span class="sr-only">Previous</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+
+                                        <template x-for="page in displayedPages" :key="page">
+                                            <button @click="goToPage(page)" 
+                                                    :class="page === currentPage ? 
+                                                        'relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600 z-10' : 
+                                                        page === '...' ? 
+                                                        'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 cursor-default' :
+                                                        'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'"
+                                                    :disabled="page === '...'"
+                                                    x-text="page">
+                                            </button>
+                                        </template>
+
+                                        <button @click="nextPage()" 
+                                                :disabled="currentPage === totalPages"
+                                                :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
+                                                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                            <span class="sr-only">Next</span>
+                                            <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -622,7 +1090,7 @@
 <script src="{{ asset('vendor/js/jquery.dataTables.min.js') }}"></script>
 
 <script>
-let roomsTable, facultyTable;
+let roomsTable, facultyTable, subjectsTable;
 
 // Tab switching
 function showTab(tab) {
@@ -648,9 +1116,10 @@ function showTab(tab) {
     // Store active tab in localStorage
     localStorage.setItem('activeHistoryTab', tab);
     
-    // Reapply filters when switching tabs (redraw both tables to ensure filters work)
+    // Reapply filters when switching tabs (redraw all tables to ensure filters work)
     if (roomsTable) roomsTable.draw();
     if (facultyTable) facultyTable.draw();
+    // Note: subjectsTable uses Alpine.js, not DataTables, so no draw() method
 }
 
 // Initialize Rooms DataTable
@@ -711,127 +1180,52 @@ function initFacultyTable() {
 function applyTailwindToPagination(table) {
     const wrapper = $(table.table().container());
     
-    // Style the pagination container
+    // Create footer wrapper for better layout
+    const info = wrapper.find('.dataTables_info');
     const paginate = wrapper.find('.dataTables_paginate');
+    
+    // Wrap info and paginate in a flex container if not already wrapped
+    if (!info.parent().hasClass('dataTables_footer_wrapper')) {
+        info.add(paginate).wrapAll('<div class="dataTables_footer_wrapper"></div>');
+    }
+    
+    // Style the pagination container
     paginate.css({
         'display': 'flex',
         'align-items': 'center',
-        'gap': '0.75rem',
-        'justify-content': 'flex-end',
-        'padding-top': '1rem'
+        'gap': '0.5rem',
+        'justify-content': 'flex-end'
     });
     
     // Style the page number container span
     paginate.find('span').css({
         'display': 'inline-flex',
-        'gap': '0.5rem',
+        'gap': '0.375rem',
         'align-items': 'center'
     });
     
-    // Style all pagination buttons
+    // Style all pagination buttons (removed duplicate styling - CSS handles it now)
     wrapper.find('.paginate_button').each(function() {
         const $btn = $(this);
         
-        // Check state BEFORE removing classes
+        // Check state
         const isCurrent = $btn.hasClass('current');
         const isDisabled = $btn.hasClass('disabled');
-        const isPrevious = $btn.hasClass('previous');
-        const isNext = $btn.hasClass('next');
-        const isFirst = $btn.hasClass('first');
-        const isLast = $btn.hasClass('last');
         
-        // Apply inline styles for immediate effect
-        const baseStyles = {
-            'display': 'inline-flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            'min-width': '2.5rem',
-            'height': '2.5rem',
-            'padding': '0.5rem 0.875rem',
-            'margin': '0 0.125rem',
-            'border-radius': '0.5rem',
-            'border': '1px solid',
-            'font-size': '0.875rem',
-            'font-weight': '500',
-            'text-align': 'center',
-            'transition': 'all 0.2s ease',
-            'text-decoration': 'none',
-            'white-space': 'nowrap'
-        };
+        // Remove any inline hover handlers that might conflict
+        $btn.off('mouseenter mouseleave');
         
-        if (isCurrent) {
-            // Active page - blue background
-            Object.assign(baseStyles, {
-                'background-color': '#3b82f6',
-                'color': '#ffffff',
-                'border-color': '#3b82f6',
-                'font-weight': '600',
-                'cursor': 'default',
-                'box-shadow': '0 4px 6px -1px rgba(59, 130, 246, 0.4)'
-            });
-        } else if (isDisabled) {
-            // Disabled - grayed out
-            Object.assign(baseStyles, {
-                'background-color': '#f9fafb',
-                'color': '#9ca3af',
-                'border-color': '#e5e7eb',
-                'opacity': '0.5',
-                'cursor': 'not-allowed',
-                'pointer-events': 'none'
-            });
-        } else if (isPrevious || isNext || isFirst || isLast) {
-            // Previous/Next/First/Last buttons
-            Object.assign(baseStyles, {
-                'background-color': '#ffffff',
-                'color': '#374151',
-                'border-color': '#d1d5db',
-                'font-weight': '600',
-                'padding': '0.5rem 1rem',
-                'cursor': 'pointer',
-                'box-shadow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-            });
-        } else {
-            // Regular page numbers
-            Object.assign(baseStyles, {
-                'background-color': '#ffffff',
-                'color': '#374151',
-                'border-color': '#d1d5db',
-                'cursor': 'pointer',
-                'box-shadow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-            });
-        }
-        
-        $btn.css(baseStyles);
-        
-        // Add hover effects for non-disabled, non-current buttons
+        // Add enhanced hover effects for interactive buttons
         if (!isCurrent && !isDisabled) {
             $btn.hover(
                 function() {
-                    $(this).css({
-                        'background-color': '#f3f4f6',
-                        'border-color': '#3b82f6',
-                        'color': '#3b82f6',
-                        'box-shadow': '0 2px 4px 0 rgba(0, 0, 0, 0.1)'
-                    });
+                    // Hover-in handled by CSS :hover pseudo-class
                 },
                 function() {
-                    $(this).css({
-                        'background-color': '#ffffff',
-                        'border-color': '#d1d5db',
-                        'color': '#374151',
-                        'box-shadow': '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-                    });
+                    // Hover-out handled by CSS
                 }
             );
         }
-    });
-    
-    // Style the info text
-    wrapper.find('.dataTables_info').css({
-        'font-size': '0.875rem',
-        'color': '#6b7280',
-        'font-weight': '500',
-        'padding-top': '1rem'
     });
 }
 
@@ -850,6 +1244,7 @@ $.fn.dataTable.ext.search.push(
         const tableId = settings.nTable.id;
         const isRoomsTable = tableId === 'roomsTable';
         const isFacultyTable = tableId === 'facultyTable';
+        const isSubjectsTable = tableId === 'subjectsTable';
         
         // Get the table instance
         const table = $.fn.dataTable.Api(settings);
@@ -946,7 +1341,10 @@ function applyFilters() {
     
     console.log('Applying filters:', currentFilters);
     
-    // Redraw both tables if they exist
+    // Update export button text and info to reflect active filters
+    updateExportButtonText();
+    
+    // Redraw DataTables if they exist
     if (roomsTable) {
         console.log('Redrawing rooms table');
         roomsTable.draw();
@@ -954,6 +1352,87 @@ function applyFilters() {
     if (facultyTable) {
         console.log('Redrawing faculty table');
         facultyTable.draw();
+    }
+}
+
+// Export subjects PDF with selected filters
+function exportSubjectsPdf() {
+    const deptValue = document.getElementById('filterDepartment').value;
+    const yearValue = document.getElementById('filterYear').value;
+    const semesterValue = document.getElementById('filterSemester').value;
+    
+    // Build export URL
+    let url = '{{ path('admin_history') }}?export=subjects';
+    
+    if (deptValue) {
+        url += '&department=' + deptValue;
+    }
+    if (yearValue) {
+        url += '&year=' + yearValue;
+    }
+    if (semesterValue) {
+        url += '&semester=' + semesterValue;
+    }
+    
+    // Open in new tab
+    window.open(url, '_blank');
+}
+
+// Update export button text to show active filters
+function updateExportButtonText() {
+    const deptSelect = document.getElementById('filterDepartment');
+    const yearSelect = document.getElementById('filterYear');
+    const semesterSelect = document.getElementById('filterSemester');
+    
+    const deptText = deptSelect ? deptSelect.options[deptSelect.selectedIndex]?.text || '' : '';
+    const yearValue = yearSelect.value;
+    const semesterValue = semesterSelect.value;
+    
+    // Update subjects export button
+    const subjectsBtn = document.getElementById('export-button-text-subjects');
+    const filterBadge = document.getElementById('active-filters-badge');
+    
+    if (subjectsBtn) {
+        let btnText = 'Export PDF';
+        let filters = [];
+        let badgeHTML = '';
+        
+        if (deptText && deptSelect.value) {
+            filters.push(deptText);
+            badgeHTML += `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-teal-100 text-teal-800 border-2 border-teal-300">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/>
+                </svg>
+                ${deptText}
+            </span>`;
+        }
+        if (yearValue) {
+            filters.push(yearValue);
+            badgeHTML += `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border-2 border-blue-300">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                ${yearValue}
+            </span>`;
+        }
+        if (semesterValue) {
+            filters.push(semesterValue + ' Semester');
+            badgeHTML += `<span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-purple-100 text-purple-800 border-2 border-purple-300">
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                ${semesterValue} Semester
+            </span>`;
+        }
+        
+        if (filters.length === 0) {
+            badgeHTML = '<span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-100 text-gray-700 border-2 border-gray-300">All Departments • All Years • All Semesters</span>';
+        }
+        
+        subjectsBtn.textContent = btnText;
+        if (filterBadge) {
+            filterBadge.innerHTML = badgeHTML;
+        }
     }
 }
 
@@ -966,9 +1445,18 @@ document.getElementById('clearFilters').addEventListener('click', function() {
     
     currentFilters = { department: '', year: '', semester: '', search: '' };
     
-    // Redraw both tables
+    // Update export button text
+    updateExportButtonText();
+    
+    // Redraw DataTables
     if (roomsTable) roomsTable.draw();
     if (facultyTable) facultyTable.draw();
+    
+    // Trigger Alpine.js subjects table to refresh
+    if (subjectsAlpineComponent) {
+        subjectsAlpineComponent.search = '';
+        subjectsAlpineComponent.filterData();
+    }
 });
 
 // Apply filters on change (instant filtering - no page reload)
@@ -983,16 +1471,620 @@ document.getElementById('filterSearch').addEventListener('keyup', function() {
     searchTimeout = setTimeout(applyFilters, 300);
 });
 
+// Alpine.js Subjects Table Logic
+let subjectsAlpineComponent = null;
+
+// Department Group Mapping - for filtering by department group
+const departmentGroupMap = {
+    {% for deptId, groupDepts in departmentGroupMap %}
+    {{ deptId }}: [
+        {% for groupDept in groupDepts %}
+        { id: {{ groupDept.id }}, name: '{{ groupDept.name|e('js') }}' },
+        {% endfor %}
+    ],
+    {% endfor %}
+};
+
+function roomsTableData() {
+    return {
+        rooms: [],
+        filteredRooms: [],
+        paginatedRooms: [],
+        currentPage: 1,
+        perPage: 10,
+        totalPages: 1,
+        startIndex: 0,
+        endIndex: 0,
+        
+        init() {
+            // Load rooms data from server
+            this.rooms = [
+                {% for item in roomsData %}
+                {% set room = item[0] %}
+                {
+                    id: {{ room.id }},
+                    name: '{{ room.name|e('js') }}',
+                    building: '{{ room.building|e('js') }}',
+                    capacity: {{ room.capacity }},
+                    scheduleCount: {{ item.scheduleCount }},
+                    departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
+                    years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
+                    semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
+                },
+                {% endfor %}
+            ];
+            
+            // Listen to global filter changes
+            const self = this;
+            document.getElementById('filterDepartment').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterYear').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterSemester').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterSearch').addEventListener('keyup', function() {
+                clearTimeout(window.roomSearchTimeout);
+                window.roomSearchTimeout = setTimeout(() => self.applyFilters(), 300);
+            });
+            
+            this.applyFilters();
+        },
+        
+        applyFilters() {
+            let filtered = [...this.rooms];
+            
+            // Apply department filter (including department group members)
+            const deptValue = document.getElementById('filterDepartment')?.value;
+            if (deptValue) {
+                const deptId = parseInt(deptValue);
+                const deptName = document.querySelector('#filterDepartment option:checked')?.text.trim();
+                
+                // Get all department names to filter by (including group members)
+                const deptNamesToFilter = [deptName];
+                if (departmentGroupMap[deptId]) {
+                    departmentGroupMap[deptId].forEach(groupDept => {
+                        if (groupDept.name !== deptName) {
+                            deptNamesToFilter.push(groupDept.name);
+                        }
+                    });
+                }
+                
+                filtered = filtered.filter(room => {
+                    return room.departments.some(d => 
+                        deptNamesToFilter.some(filterName => d.includes(filterName))
+                    );
+                });
+            }
+            
+            // Apply year filter
+            const yearValue = document.getElementById('filterYear')?.value;
+            if (yearValue) {
+                filtered = filtered.filter(room => {
+                    return room.years.some(y => y.includes(yearValue));
+                });
+            }
+            
+            // Apply semester filter
+            const semesterValue = document.getElementById('filterSemester')?.value;
+            if (semesterValue) {
+                filtered = filtered.filter(room => {
+                    return room.semesters.some(s => s.includes(semesterValue));
+                });
+            }
+            
+            // Apply search filter
+            const searchValue = document.getElementById('filterSearch')?.value.toLowerCase() || '';
+            if (searchValue) {
+                filtered = filtered.filter(room => 
+                    room.name.toLowerCase().includes(searchValue) ||
+                    room.building.toLowerCase().includes(searchValue)
+                );
+            }
+            
+            this.filteredRooms = filtered;
+            this.currentPage = 1;
+            this.updatePagination();
+        },
+        
+        updatePagination() {
+            this.totalPages = Math.ceil(this.filteredRooms.length / this.perPage) || 1;
+            this.startIndex = (this.currentPage - 1) * this.perPage;
+            this.endIndex = this.startIndex + this.perPage;
+            this.paginatedRooms = this.filteredRooms.slice(this.startIndex, this.endIndex);
+        },
+        
+        previousPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.updatePagination();
+            }
+        },
+        
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                this.updatePagination();
+            }
+        },
+        
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                this.updatePagination();
+            }
+        },
+        
+        get visiblePages() {
+            const pages = [];
+            const maxVisible = 7;
+            
+            if (this.totalPages <= maxVisible) {
+                for (let i = 1; i <= this.totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                pages.push(1);
+                let start = Math.max(2, this.currentPage - 1);
+                let end = Math.min(this.totalPages - 1, this.currentPage + 1);
+                
+                if (this.currentPage <= 3) end = 5;
+                if (this.currentPage >= this.totalPages - 2) start = this.totalPages - 4;
+                
+                if (start > 2) pages.push('...');
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (end < this.totalPages - 1) pages.push('...');
+                
+                pages.push(this.totalPages);
+            }
+            
+            return pages;
+        },
+        
+        exportRoomsCsv() {
+            const deptValue = document.getElementById('filterDepartment')?.value || '';
+            const yearValue = document.getElementById('filterYear')?.value || '';
+            const semesterValue = document.getElementById('filterSemester')?.value || '';
+            const searchValue = document.getElementById('filterSearch')?.value || '';
+            
+            const params = new URLSearchParams();
+            params.append('export', 'rooms');
+            if (deptValue) params.append('department', deptValue);
+            if (yearValue) params.append('year', yearValue);
+            if (semesterValue) params.append('semester', semesterValue);
+            if (searchValue) params.append('search', searchValue);
+            
+            window.location.href = '{{ path('admin_history') }}?' + params.toString();
+        },
+        
+        exportRoomsPdf() {
+            const deptValue = document.getElementById('filterDepartment')?.value || '';
+            const yearValue = document.getElementById('filterYear')?.value || '';
+            const semesterValue = document.getElementById('filterSemester')?.value || '';
+            const searchValue = document.getElementById('filterSearch')?.value || '';
+            
+            const params = new URLSearchParams();
+            params.append('export', 'rooms-pdf');
+            if (deptValue) params.append('department', deptValue);
+            if (yearValue) params.append('year', yearValue);
+            if (semesterValue) params.append('semester', semesterValue);
+            if (searchValue) params.append('search', searchValue);
+            
+            window.open('{{ path('admin_history') }}?' + params.toString(), '_blank');
+        }
+    };
+}
+
+function facultyTableData() {
+    return {
+        faculty: [],
+        filteredFaculty: [],
+        paginatedFaculty: [],
+        currentPage: 1,
+        perPage: 10,
+        totalPages: 1,
+        startIndex: 0,
+        endIndex: 0,
+        
+        init() {
+            // Load faculty data from server
+            this.faculty = [
+                {% for item in facultyData %}
+                {% set faculty = item[0] %}
+                {
+                    id: {{ faculty.id }},
+                    firstName: '{{ faculty.firstName|e('js') }}',
+                    lastName: '{{ faculty.lastName|e('js') }}',
+                    fullName: '{{ faculty.firstName|e('js') }} {{ faculty.lastName|e('js') }}',
+                    initials: '{{ faculty.firstName|first }}{{ faculty.lastName|first }}',
+                    employeeId: '{{ faculty.employeeId|e('js') }}',
+                    position: '{{ faculty.position|e('js') }}',
+                    departmentName: '{{ faculty.department ? faculty.department.name|e('js') : '' }}',
+                    departmentId: '{{ faculty.department ? faculty.department.id : '' }}',
+                    scheduleCount: {{ item.scheduleCount }},
+                    totalUnits: {{ item.totalUnits ?? 0 }},
+                    departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
+                    years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
+                    semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
+                },
+                {% endfor %}
+            ];
+            
+            // Listen to global filter changes
+            const self = this;
+            document.getElementById('filterDepartment').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterYear').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterSemester').addEventListener('change', () => self.applyFilters());
+            document.getElementById('filterSearch').addEventListener('keyup', function() {
+                clearTimeout(window.facultySearchTimeout);
+                window.facultySearchTimeout = setTimeout(() => self.applyFilters(), 300);
+            });
+            
+            this.applyFilters();
+        },
+        
+        applyFilters() {
+            let filtered = [...this.faculty];
+            
+            // Apply department filter (including department group members)
+            const deptValue = document.getElementById('filterDepartment')?.value;
+            if (deptValue) {
+                const deptId = parseInt(deptValue);
+                const deptName = document.querySelector('#filterDepartment option:checked')?.text.trim();
+                
+                // Get all department names to filter by (including group members)
+                const deptNamesToFilter = [deptName];
+                if (departmentGroupMap[deptId]) {
+                    departmentGroupMap[deptId].forEach(groupDept => {
+                        if (groupDept.name !== deptName) {
+                            deptNamesToFilter.push(groupDept.name);
+                        }
+                    });
+                }
+                
+                filtered = filtered.filter(member => {
+                    return deptNamesToFilter.some(filterName => 
+                        member.departmentName.includes(filterName) || 
+                        member.departments.some(d => d.includes(filterName))
+                    );
+                });
+            }
+            
+            // Apply year filter
+            const yearValue = document.getElementById('filterYear')?.value;
+            if (yearValue) {
+                filtered = filtered.filter(member => {
+                    return member.years.some(y => y.includes(yearValue));
+                });
+            }
+            
+            // Apply semester filter
+            const semesterValue = document.getElementById('filterSemester')?.value;
+            if (semesterValue) {
+                filtered = filtered.filter(member => {
+                    return member.semesters.some(s => s.includes(semesterValue));
+                });
+            }
+            
+            // Apply search filter
+            const searchValue = document.getElementById('filterSearch')?.value.toLowerCase() || '';
+            if (searchValue) {
+                filtered = filtered.filter(member => 
+                    member.fullName.toLowerCase().includes(searchValue) ||
+                    member.employeeId.toLowerCase().includes(searchValue) ||
+                    member.position.toLowerCase().includes(searchValue) ||
+                    member.departmentName.toLowerCase().includes(searchValue)
+                );
+            }
+            
+            this.filteredFaculty = filtered;
+            this.currentPage = 1;
+            this.updatePagination();
+        },
+        
+        updatePagination() {
+            this.totalPages = Math.ceil(this.filteredFaculty.length / this.perPage) || 1;
+            this.startIndex = (this.currentPage - 1) * this.perPage;
+            this.endIndex = this.startIndex + this.perPage;
+            this.paginatedFaculty = this.filteredFaculty.slice(this.startIndex, this.endIndex);
+        },
+        
+        previousPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.updatePagination();
+            }
+        },
+        
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                this.updatePagination();
+            }
+        },
+        
+        goToPage(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                this.updatePagination();
+            }
+        },
+        
+        get visiblePages() {
+            const pages = [];
+            const maxVisible = 7;
+            
+            if (this.totalPages <= maxVisible) {
+                for (let i = 1; i <= this.totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                pages.push(1);
+                let start = Math.max(2, this.currentPage - 1);
+                let end = Math.min(this.totalPages - 1, this.currentPage + 1);
+                
+                if (this.currentPage <= 3) end = 5;
+                if (this.currentPage >= this.totalPages - 2) start = this.totalPages - 4;
+                
+                if (start > 2) pages.push('...');
+                for (let i = start; i <= end; i++) pages.push(i);
+                if (end < this.totalPages - 1) pages.push('...');
+                
+                pages.push(this.totalPages);
+            }
+            
+            return pages;
+        },
+        
+        exportFacultyCsv() {
+            const deptValue = document.getElementById('filterDepartment')?.value || '';
+            const yearValue = document.getElementById('filterYear')?.value || '';
+            const semesterValue = document.getElementById('filterSemester')?.value || '';
+            const searchValue = document.getElementById('filterSearch')?.value || '';
+            
+            const params = new URLSearchParams();
+            params.append('export', 'faculty');
+            if (deptValue) params.append('department', deptValue);
+            if (yearValue) params.append('year', yearValue);
+            if (semesterValue) params.append('semester', semesterValue);
+            if (searchValue) params.append('search', searchValue);
+            
+            window.location.href = '{{ path('admin_history') }}?' + params.toString();
+        },
+        
+        exportFacultyPdf() {
+            const deptValue = document.getElementById('filterDepartment')?.value || '';
+            const yearValue = document.getElementById('filterYear')?.value || '';
+            const semesterValue = document.getElementById('filterSemester')?.value || '';
+            const searchValue = document.getElementById('filterSearch')?.value || '';
+            
+            const params = new URLSearchParams();
+            params.append('export', 'faculty-pdf');
+            if (deptValue) params.append('department', deptValue);
+            if (yearValue) params.append('year', yearValue);
+            if (semesterValue) params.append('semester', semesterValue);
+            if (searchValue) params.append('search', searchValue);
+            
+            window.open('{{ path('admin_history') }}?' + params.toString(), '_blank');
+        }
+    };
+}
+
+function subjectsTableData() {
+    return {
+        allData: [],
+        filteredData: [],
+        paginatedData: [],
+        search: '',
+        sortField: 'code',
+        sortDirection: 'asc',
+        perPage: 10,
+        currentPage: 1,
+        totalPages: 1,
+        totalFiltered: 0,
+        startEntry: 0,
+        endEntry: 0,
+        
+        init() {
+            // Store reference globally
+            subjectsAlpineComponent = this;
+            
+            // Load data from server
+            this.allData = [
+                {% for item in subjectsData %}
+                {% set subject = item[0] %}
+                {
+                    id: {{ subject.id }},
+                    code: '{{ subject.code|e('js') }}',
+                    title: '{{ subject.title|e('js') }}',
+                    department: '{{ subject.department ? subject.department.name|e('js') : '' }}',
+                    departmentId: '{{ item.departmentId|default('') }}',
+                    units: {{ subject.units }},
+                    type: '{{ subject.type|e('js') }}',
+                    timesOffered: {{ item.timesOffered }},
+                    facultyCount: {{ item.facultyCount }},
+                    years: {{ item.yearsList|default([])|json_encode|raw }},
+                    semesters: {{ item.semestersList|default([])|json_encode|raw }}
+                },
+                {% endfor %}
+            ];
+            
+            // Listen to global filter changes
+            const self = this;
+            document.getElementById('filterDepartment').addEventListener('change', () => self.filterData());
+            document.getElementById('filterYear').addEventListener('change', () => self.filterData());
+            document.getElementById('filterSemester').addEventListener('change', () => self.filterData());
+            document.getElementById('filterSearch').addEventListener('keyup', function() {
+                clearTimeout(window.globalSearchTimeout);
+                window.globalSearchTimeout = setTimeout(() => {
+                    self.search = this.value;
+                    self.filterData();
+                }, 300);
+            });
+            
+            this.filterData();
+        },
+        
+        filterData() {
+            let filtered = [...this.allData];
+            
+            // Apply global department filter (including department group members)
+            const globalDeptFilter = document.getElementById('filterDepartment')?.value;
+            if (globalDeptFilter) {
+                const deptId = parseInt(globalDeptFilter);
+                
+                // Get all department IDs to filter by (including group members)
+                const deptIdsToFilter = [globalDeptFilter];
+                if (departmentGroupMap[deptId]) {
+                    departmentGroupMap[deptId].forEach(groupDept => {
+                        deptIdsToFilter.push(groupDept.id.toString());
+                    });
+                }
+                
+                filtered = filtered.filter(subject => 
+                    deptIdsToFilter.includes(subject.departmentId)
+                );
+            }
+            
+            // Apply global year filter
+            const globalYearFilter = document.getElementById('filterYear')?.value;
+            if (globalYearFilter) {
+                filtered = filtered.filter(subject => {
+                    return subject.years && subject.years.includes(globalYearFilter);
+                });
+            }
+            
+            // Apply global semester filter
+            const globalSemesterFilter = document.getElementById('filterSemester')?.value;
+            if (globalSemesterFilter) {
+                filtered = filtered.filter(subject => {
+                    return subject.semesters && subject.semesters.includes(globalSemesterFilter);
+                });
+            }
+            
+            // Apply search filter (from internal search or global search)
+            const globalSearch = document.getElementById('filterSearch')?.value || '';
+            const searchTerm = this.search || globalSearch;
+            
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                filtered = filtered.filter(subject => 
+                    subject.code.toLowerCase().includes(searchLower) ||
+                    subject.title.toLowerCase().includes(searchLower) ||
+                    subject.department.toLowerCase().includes(searchLower)
+                );
+            }
+            
+            // Apply sorting
+            filtered.sort((a, b) => {
+                let aVal = a[this.sortField];
+                let bVal = b[this.sortField];
+                
+                // Handle null/undefined values
+                if (aVal === null || aVal === undefined) aVal = '';
+                if (bVal === null || bVal === undefined) bVal = '';
+                
+                // Convert to lowercase for string comparison
+                if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                
+                if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            this.filteredData = filtered;
+            this.totalFiltered = filtered.length;
+            this.currentPage = 1; // Reset to first page
+            this.updatePagination();
+        },
+        
+        updatePagination() {
+            this.totalPages = Math.ceil(this.totalFiltered / this.perPage) || 1;
+            const start = (this.currentPage - 1) * this.perPage;
+            const end = start + this.perPage;
+            this.paginatedData = this.filteredData.slice(start, end);
+            
+            this.startEntry = this.totalFiltered > 0 ? start + 1 : 0;
+            this.endEntry = Math.min(end, this.totalFiltered);
+        },
+        
+        sortBy(field) {
+            if (this.sortField === field) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortField = field;
+                this.sortDirection = 'asc';
+            }
+            this.filterData();
+        },
+        
+        changePerPage() {
+            this.currentPage = 1;
+            this.updatePagination();
+        },
+        
+        prevPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.updatePagination();
+            }
+        },
+        
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                this.updatePagination();
+            }
+        },
+        
+        goToPage(page) {
+            if (page !== '...' && page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                this.updatePagination();
+            }
+        },
+        
+        get displayedPages() {
+            const pages = [];
+            const maxVisible = 7;
+            
+            if (this.totalPages <= maxVisible) {
+                for (let i = 1; i <= this.totalPages; i++) {
+                    pages.push(i);
+                }
+            } else {
+                pages.push(1);
+                
+                let start = Math.max(2, this.currentPage - 1);
+                let end = Math.min(this.totalPages - 1, this.currentPage + 1);
+                
+                if (this.currentPage <= 3) {
+                    end = 5;
+                }
+                if (this.currentPage >= this.totalPages - 2) {
+                    start = this.totalPages - 4;
+                }
+                
+                if (start > 2) pages.push('...');
+                
+                for (let i = start; i <= end; i++) {
+                    pages.push(i);
+                }
+                
+                if (end < this.totalPages - 1) pages.push('...');
+                
+                pages.push(this.totalPages);
+            }
+            
+            return pages;
+        }
+    };
+}
+
 // Restore active tab from localStorage or default to rooms
 document.addEventListener('DOMContentLoaded', function() {
     const activeTab = localStorage.getItem('activeHistoryTab') || 'rooms';
     showTab(activeTab);
     
-    // Initialize DataTables after a short delay
-    setTimeout(() => {
-        initRoomsTable();
-        initFacultyTable();
-    }, 100);
+    // Initialize export button text with initial filters
+    updateExportButtonText();
 });
 </script>
 {% endblock %}

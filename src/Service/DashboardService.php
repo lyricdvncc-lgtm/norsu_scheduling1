@@ -6,6 +6,8 @@ use App\Repository\UserRepository;
 use App\Repository\CurriculumRepository;
 use App\Repository\RoomRepository;
 use App\Repository\ActivityLogRepository;
+use App\Repository\CollegeRepository;
+use App\Repository\DepartmentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class DashboardService
@@ -14,20 +16,29 @@ class DashboardService
     private CurriculumRepository $curriculumRepository;
     private RoomRepository $roomRepository;
     private ActivityLogRepository $activityLogRepository;
+    private CollegeRepository $collegeRepository;
+    private DepartmentRepository $departmentRepository;
     private EntityManagerInterface $entityManager;
+    private \App\Repository\SubjectRepository $subjectRepository;
 
     public function __construct(
         UserRepository $userRepository, 
         CurriculumRepository $curriculumRepository,
         RoomRepository $roomRepository,
         ActivityLogRepository $activityLogRepository,
-        EntityManagerInterface $entityManager
+        CollegeRepository $collegeRepository,
+        DepartmentRepository $departmentRepository,
+        EntityManagerInterface $entityManager,
+        \App\Repository\SubjectRepository $subjectRepository
     ) {
         $this->userRepository = $userRepository;
         $this->curriculumRepository = $curriculumRepository;
         $this->roomRepository = $roomRepository;
         $this->activityLogRepository = $activityLogRepository;
+        $this->collegeRepository = $collegeRepository;
+        $this->departmentRepository = $departmentRepository;
         $this->entityManager = $entityManager;
+        $this->subjectRepository = $subjectRepository;
     }
 
     public function getAdminDashboardData(): array
@@ -91,6 +102,19 @@ class DashboardService
         // Get recent activities
         $recentActivities = $this->activityLogRepository->findRecentActivities(15);
 
+        // Get college and department counts
+        $collegeCount = $this->collegeRepository->count([]);
+        $departmentCount = $this->departmentRepository->count([]);
+        
+        // Get subjects count
+        $subjectCount = $this->subjectRepository->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->where('s.deletedAt IS NULL')
+            ->andWhere('s.isActive = :active')
+            ->setParameter('active', true)
+            ->getQuery()
+            ->getSingleScalarResult();
+
         return [
             'total_users' => $totalUsers,
             'admin_count' => $adminCount,
@@ -109,6 +133,10 @@ class DashboardService
             'total_rooms' => $roomStats['total'],
             'available_rooms' => $roomStats['available'],
             'room_stats' => $roomStats,
+            // College and Department data
+            'college_count' => $collegeCount,
+            'department_count' => $departmentCount,
+            'total_subjects' => $subjectCount,
             // Activity data
             'recent_activities' => $recentActivities,
             'system_stats' => [

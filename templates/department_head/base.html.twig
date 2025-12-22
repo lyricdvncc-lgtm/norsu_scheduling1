@@ -433,14 +433,13 @@
                         
                         <!-- Search -->
                         <div class="hidden md:block ml-4">
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                    </svg>
-                                </div>
-                                <input type="search" placeholder="Search dashboard..."
-                                       class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition duration-200">
+                            <div class="relative flex items-center">
+                                <svg class="absolute left-4 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="search" placeholder="Search..."
+                                       style="padding-left: 2.5rem !important;"
+                                       class="block w-full pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition duration-200">
                             </div>
                         </div>
                     </div>
@@ -600,6 +599,27 @@
                     {% block main_content %}
                     <!-- Default dashboard content goes here -->
                     {% endblock %}
+                    
+                    <!-- Footer -->
+                    <footer class="mt-12 border-t border-gray-200 pt-8 pb-6 bg-white/50 backdrop-blur-sm rounded-lg">
+                        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div class="text-center md:text-left">
+                                    <p class="text-sm text-gray-600">
+                                        © 2025 <span class="font-semibold">Negros Oriental State University</span>
+                                    </p>
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        Smart Scheduling System - Department Head Portal
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-6 text-xs text-gray-500">
+                                    <a href="#" class="hover:text-gray-700 transition-colors">Help</a>
+                                    <a href="#" class="hover:text-gray-700 transition-colors">Privacy</a>
+                                    <a href="#" class="hover:text-gray-700 transition-colors">Terms</a>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
                 </div>
             </main>
         </div>

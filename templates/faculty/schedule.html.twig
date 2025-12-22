@@ -163,75 +163,441 @@
         </div>
 
         <!-- Schedule List View -->
-        <div class="mt-6 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Class List</h2>
-            </div>
+        <div class="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" 
+             x-data="scheduleTable()" x-init="init()">
             
-            <div class="divide-y divide-gray-200">
-                {% for schedule in schedules %}
-                    <div class="p-6 hover:bg-gray-50 transition-colors">
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <div class="flex items-center">
-                                    <h3 class="text-lg font-semibold text-gray-900">{{ schedule.subject.code }}</h3>
-                                    <span class="ml-3 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ schedule.subject.units }} units
-                                    </span>
-                                    {% if schedule.isConflicted %}
-                                        <span class="ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Conflict
-                                        </span>
-                                    {% endif %}
-                                </div>
-                                <p class="mt-1 text-sm text-gray-600">{{ schedule.subject.title }}</p>
-                                
-                                <div class="mt-3 flex flex-wrap gap-4 text-sm text-gray-500">
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                        {{ schedule.dayPatternLabel }}
-                                    </div>
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        {{ schedule.startTime|date('g:i A') }} - {{ schedule.endTime|date('g:i A') }}
-                                    </div>
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                        </svg>
-                                        {{ schedule.room.name }}
-                                    </div>
-                                    <div class="flex items-center">
-                                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                        </svg>
-                                        {{ schedule.enrolledStudents ?? 0 }} students
-                                    </div>
-                                    {% if schedule.section %}
-                                        <div class="flex items-center">
-                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                                            </svg>
-                                            {{ schedule.section }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                
-                                {% if schedule.notes %}
-                                    <div class="mt-2 text-sm text-gray-500 italic">
-                                        Note: {{ schedule.notes }}
-                                    </div>
-                                {% endif %}
-                            </div>
+            <!-- Table Controls -->
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <!-- Search -->
+                    <div class="flex-1 max-w-md">
+                        <div class="relative flex items-center">
+                            <svg class="absolute left-4 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" 
+                                   x-model="search" 
+                                   @input.debounce.300ms="filterData()"
+                                   placeholder="Search schedules..." 
+                                   style="padding-left: 2.5rem !important;"
+                                   class="block w-full pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200">
                         </div>
                     </div>
-                {% endfor %}
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Entries per page -->
+                        <div class="flex items-center gap-2">
+                            <label for="perPage" class="text-sm font-medium text-gray-700">Show:</label>
+                            <select x-model.number="perPage" 
+                                    @change="changePerPage()"
+                                    id="perPage" 
+                                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                            <span class="text-sm text-gray-700">entries</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Filters Display -->
+                <div x-show="search" class="mt-3 flex items-center gap-2 flex-wrap">
+                    <span class="text-sm text-gray-600">Active filters:</span>
+                    <template x-if="search">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Search: <span x-text="search"></span>
+                            <button @click="search = ''; filterData()" class="ml-1 hover:bg-blue-200 rounded-full p-0.5">
+                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </span>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('subjectCode')">
+                                <div class="flex items-center gap-2">
+                                    <span>Subject</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'subjectCode' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'subjectCode' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('dayPattern')">
+                                <div class="flex items-center gap-2">
+                                    <span>Schedule</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'dayPattern' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'dayPattern' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('roomName')">
+                                <div class="flex items-center gap-2">
+                                    <span>Room</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'roomName' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'roomName' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('section')">
+                                <div class="flex items-center gap-2">
+                                    <span>Section</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'section' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'section' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('enrolledStudents')">
+                                <div class="flex items-center gap-2">
+                                    <span>Students</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'enrolledStudents' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'enrolledStudents' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                @click="sortBy('units')">
+                                <div class="flex items-center gap-2">
+                                    <span>Units</span>
+                                    <span class="flex flex-col">
+                                        <svg class="w-3 h-3" :class="sortField === 'units' && sortDirection === 'asc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"/>
+                                        </svg>
+                                        <svg class="w-3 h-3 -mt-1" :class="sortField === 'units' && sortDirection === 'desc' ? 'text-blue-600' : 'text-gray-400'" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L10 13.586l3.293-3.293a1 1 0 011.414 0z"/>
+                                        </svg>
+                                    </span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <template x-if="paginatedData.length === 0">
+                            <tr>
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                        </svg>
+                                        <p class="text-gray-500 text-lg font-medium">No classes found</p>
+                                        <p class="text-gray-400 text-sm mt-1">Try adjusting your search</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                        
+                        <template x-for="(schedule, index) in paginatedData" :key="schedule.id">
+                            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex flex-col">
+                                        <div class="flex items-center gap-2">
+                                            <div class="text-sm font-medium text-gray-900" x-text="schedule.subjectCode"></div>
+                                            <template x-if="schedule.isConflicted">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                                    Conflict
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <div class="text-sm text-gray-500" x-text="schedule.subjectTitle"></div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900" x-text="schedule.dayPattern"></div>
+                                    <div class="text-sm text-gray-500" x-text="schedule.timeRange"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900" x-text="schedule.roomName"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900" x-text="schedule.section || 'N/A'"></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center text-sm text-gray-900">
+                                        <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                        </svg>
+                                        <span x-text="schedule.enrolledStudents"></span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" x-text="schedule.units"></span>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 flex justify-between sm:hidden">
+                        <button @click="prevPage()" 
+                                :disabled="currentPage === 1"
+                                :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
+                                class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            Previous
+                        </button>
+                        <button @click="nextPage()" 
+                                :disabled="currentPage === totalPages"
+                                :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
+                                class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                            Next
+                        </button>
+                    </div>
+                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                            <p class="text-sm text-gray-700">
+                                Showing
+                                <span class="font-medium" x-text="startEntry"></span>
+                                to
+                                <span class="font-medium" x-text="endEntry"></span>
+                                of
+                                <span class="font-medium" x-text="totalFiltered"></span>
+                                results
+                                <template x-if="totalFiltered !== allData.length">
+                                    <span class="text-gray-500">(filtered from <span x-text="allData.length"></span> total)</span>
+                                </template>
+                            </p>
+                        </div>
+                        <div>
+                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                <button @click="prevPage()" 
+                                        :disabled="currentPage === 1"
+                                        :class="{ 'opacity-50 cursor-not-allowed': currentPage === 1 }"
+                                        class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span class="sr-only">Previous</span>
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+
+                                <template x-for="page in displayedPages" :key="page">
+                                    <button @click="goToPage(page)" 
+                                            :class="page === currentPage ? 
+                                                'relative inline-flex items-center px-4 py-2 border border-blue-500 bg-blue-50 text-sm font-medium text-blue-600 z-10' : 
+                                                page === '...' ? 
+                                                'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 cursor-default' :
+                                                'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'"
+                                            :disabled="page === '...'"
+                                            x-text="page">
+                                    </button>
+                                </template>
+
+                                <button @click="nextPage()" 
+                                        :disabled="currentPage === totalPages"
+                                        :class="{ 'opacity-50 cursor-not-allowed': currentPage === totalPages }"
+                                        class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                                    <span class="sr-only">Next</span>
+                                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Alpine.js DataTable Logic -->
+        <script>
+            function scheduleTable() {
+                return {
+                    allData: [],
+                    filteredData: [],
+                    paginatedData: [],
+                    search: '',
+                    sortField: 'subjectCode',
+                    sortDirection: 'asc',
+                    perPage: 10,
+                    currentPage: 1,
+                    totalPages: 1,
+                    totalFiltered: 0,
+                    startEntry: 0,
+                    endEntry: 0,
+                    
+                    init() {
+                        // Load data from server
+                        this.allData = [
+                            {% for schedule in schedules %}
+                            {
+                                id: {{ schedule.id }},
+                                subjectCode: '{{ schedule.subject.code|e('js') }}',
+                                subjectTitle: '{{ schedule.subject.title|e('js') }}',
+                                units: {{ schedule.subject.units }},
+                                dayPattern: '{{ schedule.dayPatternLabel|e('js') }}',
+                                timeRange: '{{ schedule.startTime|date('g:i A') }} - {{ schedule.endTime|date('g:i A') }}',
+                                roomName: '{{ schedule.room.name|e('js') }}',
+                                enrolledStudents: {{ schedule.enrolledStudents ?? 0 }},
+                                section: '{{ schedule.section|default('')|e('js') }}',
+                                notes: '{{ schedule.notes|default('')|e('js') }}',
+                                isConflicted: {{ schedule.isConflicted ?? false ? 'true' : 'false' }}
+                            },
+                            {% endfor %}
+                        ];
+                        this.filterData();
+                    },
+                    
+                    filterData() {
+                        let filtered = [...this.allData];
+                        
+                        // Apply search filter
+                        if (this.search) {
+                            const searchLower = this.search.toLowerCase();
+                            filtered = filtered.filter(schedule => 
+                                schedule.subjectCode.toLowerCase().includes(searchLower) ||
+                                schedule.subjectTitle.toLowerCase().includes(searchLower) ||
+                                schedule.roomName.toLowerCase().includes(searchLower) ||
+                                schedule.section.toLowerCase().includes(searchLower)
+                            );
+                        }
+                        
+                        // Apply sorting
+                        filtered.sort((a, b) => {
+                            let aVal = a[this.sortField];
+                            let bVal = b[this.sortField];
+                            
+                            // Handle null/undefined values
+                            if (aVal === null || aVal === undefined) aVal = '';
+                            if (bVal === null || bVal === undefined) bVal = '';
+                            
+                            // Convert to lowercase for string comparison
+                            if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+                            if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+                            
+                            if (aVal < bVal) return this.sortDirection === 'asc' ? -1 : 1;
+                            if (aVal > bVal) return this.sortDirection === 'asc' ? 1 : -1;
+                            return 0;
+                        });
+                        
+                        this.filteredData = filtered;
+                        this.totalFiltered = filtered.length;
+                        this.currentPage = 1; // Reset to first page
+                        this.updatePagination();
+                    },
+                    
+                    updatePagination() {
+                        this.totalPages = Math.ceil(this.totalFiltered / this.perPage) || 1;
+                        const start = (this.currentPage - 1) * this.perPage;
+                        const end = start + this.perPage;
+                        this.paginatedData = this.filteredData.slice(start, end);
+                        
+                        this.startEntry = this.totalFiltered > 0 ? start + 1 : 0;
+                        this.endEntry = Math.min(end, this.totalFiltered);
+                    },
+                    
+                    sortBy(field) {
+                        if (this.sortField === field) {
+                            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+                        } else {
+                            this.sortField = field;
+                            this.sortDirection = 'asc';
+                        }
+                        this.filterData();
+                    },
+                    
+                    changePerPage() {
+                        this.currentPage = 1;
+                        this.updatePagination();
+                    },
+                    
+                    prevPage() {
+                        if (this.currentPage > 1) {
+                            this.currentPage--;
+                            this.updatePagination();
+                        }
+                    },
+                    
+                    nextPage() {
+                        if (this.currentPage < this.totalPages) {
+                            this.currentPage++;
+                            this.updatePagination();
+                        }
+                    },
+                    
+                    goToPage(page) {
+                        if (page !== '...' && page >= 1 && page <= this.totalPages) {
+                            this.currentPage = page;
+                            this.updatePagination();
+                        }
+                    },
+                    
+                    get displayedPages() {
+                        const pages = [];
+                        const maxVisible = 7;
+                        
+                        if (this.totalPages <= maxVisible) {
+                            for (let i = 1; i <= this.totalPages; i++) {
+                                pages.push(i);
+                            }
+                        } else {
+                            pages.push(1);
+                            
+                            let start = Math.max(2, this.currentPage - 1);
+                            let end = Math.min(this.totalPages - 1, this.currentPage + 1);
+                            
+                            if (this.currentPage <= 3) {
+                                end = 5;
+                            }
+                            if (this.currentPage >= this.totalPages - 2) {
+                                start = this.totalPages - 4;
+                            }
+                            
+                            if (start > 2) pages.push('...');
+                            
+                            for (let i = start; i <= end; i++) {
+                                pages.push(i);
+                            }
+                            
+                            if (end < this.totalPages - 1) pages.push('...');
+                            
+                            pages.push(this.totalPages);
+                        }
+                        
+                        return pages;
+                    }
+                };
+            }
+        </script>
     {% endif %}
 
     <style>

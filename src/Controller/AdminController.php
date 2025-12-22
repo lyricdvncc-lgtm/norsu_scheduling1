@@ -576,27 +576,12 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('admin_departments');
         }
 
-        // DEBUG: Log department data
-        error_log("=== EDIT DEPARTMENT DEBUG ===");
-        error_log("Department ID: " . $department->getId());
-        error_log("Department Code: " . $department->getCode());
-        error_log("Department Name: " . $department->getName());
-        error_log("Department College: " . ($department->getCollege() ? $department->getCollege()->getName() : 'NULL'));
-        error_log("Request Method: " . $request->getMethod());
-        error_log("Request Query: " . json_encode($request->query->all()));
-
         // Create form with the department data
         $form = $this->createForm(\App\Form\DepartmentFormType::class, $department);
-        
-        // DEBUG: Check form data before handleRequest
-        error_log("Form Data BEFORE handleRequest: " . json_encode($form->getData()));
         
         // Only handle request if it's a POST (form submission)
         if ($request->isMethod('POST')) {
             $form->handleRequest($request);
-            
-            // DEBUG: Check form data after handleRequest
-            error_log("Form Data AFTER handleRequest: " . json_encode($form->getData()));
 
             if ($form->isSubmitted() && $form->isValid()) {
                 // Check if code is unique (excluding current department)
@@ -740,10 +725,6 @@ class AdminController extends AbstractController
         // Prevent timeout for large datasets
         set_time_limit(120);
         
-        // LOG: Debug method call
-        error_log("curriculaByDepartment called for departmentId: " . $departmentId);
-        error_log("Request URI: " . $request->getRequestUri());
-        
         $department = $departmentService->getDepartmentById($departmentId);
         
         if (!$department) {
@@ -801,14 +782,9 @@ class AdminController extends AbstractController
         \App\Repository\CurriculumTermRepository $curriculumTermRepository
     ): Response
     {
-        // LOG: Debug what semester value we received
-        error_log("curriculaByDepartmentSemester called with semester: '" . $semester . "' (length: " . strlen($semester) . ")");
-        error_log("Request URI: " . $request->getRequestUri());
-        
         // Validate semester parameter - redirect if empty or whitespace only
         $semester = trim($semester);
         if (empty($semester)) {
-            error_log("Semester is empty after trim, redirecting to department page");
             return $this->redirectToRoute('admin_curricula_by_department', ['departmentId' => $departmentId]);
         }
 
@@ -843,9 +819,6 @@ class AdminController extends AbstractController
     #[Route('/curricula/department/{departmentId}/semester', name: 'curricula_by_department_semester_empty', requirements: ['departmentId' => '\d+'], priority: -1)]
     public function curriculaByDepartmentSemesterEmpty(int $departmentId, Request $request): Response
     {
-        error_log("Empty semester route hit for departmentId: " . $departmentId);
-        error_log("Request URI: " . $request->getRequestUri());
-        
         // System-wide semester is managed in System Settings
         $this->addFlash('info', 'Semester filtering is now system-wide. Use System Settings to change it.');
         return $this->redirectToRoute('admin_curricula_by_department', ['departmentId' => $departmentId]);
@@ -1673,7 +1646,7 @@ class AdminController extends AbstractController
             }
         }
 
-        return $this->render('admin/users/faculty_history.html.twig', [
+        return $this->render('admin/users/faculty_history.html.twig', array_merge($this->getBaseTemplateData(), [
             'faculty' => $faculty,
             'teachingHistory' => $teachingHistory,
             'workloadBySemester' => $workloadBySemester,
@@ -1682,7 +1655,7 @@ class AdminController extends AbstractController
             'yearFilter' => $yearFilter,
             'uniqueSubjectCount' => count($uniqueSubjectIds),
             'uniqueRoomCount' => count($uniqueRoomIds),
-        ]);
+        ]));
     }
 
     #[Route('/users/faculty/{id}/teaching-history/export', name: 'users_faculty_history_export', methods: ['GET'])]
@@ -1800,6 +1773,24 @@ class AdminController extends AbstractController
             ->getQuery()
             ->getResult();
         
+        // Build department group mapping
+        $departmentGroupMap = [];
+        foreach ($departments as $dept) {
+            if ($dept->getDepartmentGroup()) {
+                $group = $dept->getDepartmentGroup();
+                if (!isset($departmentGroupMap[$dept->getId()])) {
+                    $departmentGroupMap[$dept->getId()] = [];
+                }
+                // For each department, store all departments in its group
+                foreach ($group->getDepartments() as $groupDept) {
+                    $departmentGroupMap[$dept->getId()][] = [
+                        'id' => $groupDept->getId(),
+                        'name' => $groupDept->getName()
+                    ];
+                }
+            }
+        }
+        
         // Load ALL rooms with schedule details (for client-side filtering)
         $rooms = $this->entityManager->getRepository(\App\Entity\Room::class)
             ->createQueryBuilder('r')
@@ -1900,11 +1891,70 @@ class AdminController extends AbstractController
             ];
         }
         
+        // Load ALL subjects with schedule statistics
+        $subjects = $this->entityManager->getRepository(\App\Entity\Subject::class)
+            ->createQueryBuilder('sub')
+            ->leftJoin('sub.department', 'd')
+            ->where('sub.deletedAt IS NULL')
+            ->orderBy('d.name', 'ASC')
+            ->addOrderBy('sub.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+        
+        // Build subjects data with schedule details
+        $subjectsData = [];
+        foreach ($subjects as $subject) {
+            $subjectSchedules = array_filter($schedules, fn($s) => $s->getSubject() && $s->getSubject()->getId() === $subject->getId());
+            
+            // Get unique faculty, years, semesters for this subject
+            $subjectFaculty = [];
+            $subjectYears = [];
+            $subjectSemesters = [];
+            $subjectDepartments = [];
+            
+            foreach ($subjectSchedules as $schedule) {
+                if ($schedule->getFaculty()) {
+                    $fac = $schedule->getFaculty();
+                    $subjectFaculty[$fac->getId()] = $fac->getFirstName() . ' ' . $fac->getLastName();
+                }
+                if ($schedule->getAcademicYear()) {
+                    $subjectYears[$schedule->getAcademicYear()->getId()] = $schedule->getAcademicYear()->getYear();
+                }
+                if ($schedule->getSemester()) {
+                    $subjectSemesters[] = $schedule->getSemester();
+                }
+            }
+            
+            // Store department info for filtering
+            if ($subject->getDepartment()) {
+                $subjectDepartments[$subject->getDepartment()->getId()] = $subject->getDepartment()->getName();
+            }
+            
+            $subjectsData[] = [
+                0 => $subject,
+                'timesOffered' => count($subjectSchedules),
+                'facultyCount' => count($subjectFaculty),
+                'facultyList' => array_values($subjectFaculty),
+                'departments' => implode(', ', array_unique($subjectDepartments)),
+                'years' => implode(', ', array_unique($subjectYears)),
+                'semesters' => implode(', ', array_unique($subjectSemesters)),
+                'departmentId' => $subject->getDepartment() ? $subject->getDepartment()->getId() : null,
+                'yearsList' => array_values(array_unique($subjectYears)),
+                'semestersList' => array_values(array_unique($subjectSemesters))
+            ];
+        }
+        
         // Handle bulk exports (apply filters only for export)
         if ($exportType === 'rooms') {
-            return $this->exportAllRooms($roomsData, $selectedYear, $selectedSemester);
+            return $this->exportAllRooms($roomsData, $selectedYear, $selectedSemester, $selectedDepartment, $searchTerm);
+        } elseif ($exportType === 'rooms-pdf') {
+            return $this->exportAllRoomsPdf($roomsData, $selectedYear, $selectedSemester, $selectedDepartment, $searchTerm);
         } elseif ($exportType === 'faculty') {
-            return $this->exportAllFaculty($facultyData, $selectedYear, $selectedSemester);
+            return $this->exportAllFaculty($facultyData, $selectedYear, $selectedSemester, $selectedDepartment, $searchTerm);
+        } elseif ($exportType === 'faculty-pdf') {
+            return $this->exportAllFacultyPdf($facultyData, $selectedYear, $selectedSemester, $selectedDepartment, $searchTerm);
+        } elseif ($exportType === 'subjects') {
+            return $this->exportAllSubjectsPdf($selectedYear, $selectedSemester, $selectedDepartment);
         }
         
         // Create display string for active semester
@@ -1912,9 +1962,10 @@ class AdminController extends AbstractController
             ? $activeYear->getYear() . ' | ' . $activeSemester . ' Semester'
             : null;
         
-        return $this->render('admin/history/index.html.twig', [
+        return $this->render('admin/history/index.html.twig', array_merge($this->getBaseTemplateData(), [
             'years' => $years,
             'departments' => $departments,
+            'departmentGroupMap' => $departmentGroupMap,
             'selectedYear' => '',
             'selectedSemester' => '',
             'selectedDepartment' => '',
@@ -1924,17 +1975,88 @@ class AdminController extends AbstractController
             'activeSemesterDisplay' => $activeSemesterDisplay,
             'roomsData' => $roomsData,
             'facultyData' => $facultyData,
+            'subjectsData' => $subjectsData,
             'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
-        ]);
+        ]));
     }
 
-    private function exportAllRooms(array $roomsData, string $year, string $semester): Response
+    private function exportAllRooms(array $roomsData, string $year, string $semester, string $departmentId, string $searchTerm): Response
     {
-        // Prepare CSV data
-        $csvData = [];
-        $csvData[] = ['Room', 'Building', 'Capacity', 'Schedule Count', 'Academic Year', 'Semester'];
+        // Filter rooms based on criteria
+        $filteredRooms = [];
+        
+        // Get department names if filtering by department (include group departments)
+        $departmentNames = [];
+        $departmentDisplayName = '';
+        if ($departmentId) {
+            $department = $this->entityManager->getRepository(\App\Entity\Department::class)->find($departmentId);
+            if ($department) {
+                // Use department group name if available, otherwise use department name
+                if ($department->getDepartmentGroup()) {
+                    $group = $department->getDepartmentGroup();
+                    $departmentDisplayName = $group->getName();
+                    // Include all departments in that group
+                    foreach ($group->getDepartments() as $groupDept) {
+                        if (!in_array($groupDept->getName(), $departmentNames)) {
+                            $departmentNames[] = $groupDept->getName();
+                        }
+                    }
+                } else {
+                    $departmentDisplayName = $department->getName();
+                    $departmentNames[] = $department->getName();
+                }
+            }
+        }
         
         foreach ($roomsData as $item) {
+            $room = $item[0];
+            $departments = $item['departments'] ?? '';
+            $years = $item['years'] ?? '';
+            $semesters = $item['semesters'] ?? '';
+            
+            // Apply department filter - check if any of the group departments match
+            if (!empty($departmentNames)) {
+                $hasMatch = false;
+                foreach ($departmentNames as $deptName) {
+                    if (str_contains($departments, $deptName)) {
+                        $hasMatch = true;
+                        break;
+                    }
+                }
+                if (!$hasMatch) {
+                    continue;
+                }
+            }
+            
+            // Apply year filter
+            if ($year && !str_contains($years, $year)) {
+                continue;
+            }
+            
+            // Apply semester filter
+            if ($semester && !str_contains($semesters, $semester)) {
+                continue;
+            }
+            
+            // Apply search filter
+            if ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $roomName = strtolower($room->getName());
+                $building = strtolower($room->getBuilding());
+                
+                if (!str_contains($roomName, $searchLower) && !str_contains($building, $searchLower)) {
+                    continue;
+                }
+            }
+            
+            $filteredRooms[] = $item;
+        }
+        
+        // Prepare CSV data
+        $csvData = [];
+        $csvData[] = ['Room', 'Building', 'Capacity', 'Schedule Count', 'Academic Year', 'Semester', 'Department Filter'];
+        
+        foreach ($filteredRooms as $item) {
             $room = $item[0];
             $scheduleCount = $item['scheduleCount'];
             
@@ -1944,12 +2066,20 @@ class AdminController extends AbstractController
                 $room->getCapacity(),
                 $scheduleCount,
                 $year ?: 'All',
-                $semester ?: 'All'
+                $semester ?: 'All',
+                $departmentDisplayName ?: 'All'
             ];
         }
         
-        // Generate CSV
-        $filename = 'all_rooms_history_' . ($year ?: 'all_years') . '_' . ($semester ?: 'all_semesters') . '_' . date('Y-m-d') . '.csv';
+        // Generate CSV with descriptive filename
+        $filenameParts = ['rooms'];
+        if ($departmentDisplayName) $filenameParts[] = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentDisplayName));
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($searchTerm));
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.csv';
         
         $response = new Response();
         $response->headers->set('Content-Type', 'text/csv');
@@ -1966,13 +2096,89 @@ class AdminController extends AbstractController
         return $response;
     }
 
-    private function exportAllFaculty(array $facultyData, string $year, string $semester): Response
+    private function exportAllFaculty(array $facultyData, string $year, string $semester, string $departmentId, string $searchTerm): Response
     {
-        // Prepare CSV data
-        $csvData = [];
-        $csvData[] = ['Employee ID', 'First Name', 'Last Name', 'Position', 'Department', 'Total Units', 'Total Subjects', 'Academic Year', 'Semester'];
+        // Filter faculty based on criteria
+        $filteredFaculty = [];
+        
+        // Get department names if filtering by department (include group departments)
+        $departmentNames = [];
+        $departmentDisplayName = '';
+        if ($departmentId) {
+            $department = $this->entityManager->getRepository(\App\Entity\Department::class)->find($departmentId);
+            if ($department) {
+                // Use department group name if available, otherwise use department name
+                if ($department->getDepartmentGroup()) {
+                    $group = $department->getDepartmentGroup();
+                    $departmentDisplayName = $group->getName();
+                    // Include all departments in that group
+                    foreach ($group->getDepartments() as $groupDept) {
+                        if (!in_array($groupDept->getName(), $departmentNames)) {
+                            $departmentNames[] = $groupDept->getName();
+                        }
+                    }
+                } else {
+                    $departmentDisplayName = $department->getName();
+                    $departmentNames[] = $department->getName();
+                }
+            }
+        }
         
         foreach ($facultyData as $item) {
+            $faculty = $item[0];
+            $departments = $item['departments'] ?? '';
+            $years = $item['years'] ?? '';
+            $semesters = $item['semesters'] ?? '';
+            $facultyDeptName = $faculty->getDepartment() ? $faculty->getDepartment()->getName() : '';
+            
+            // Apply department filter - check if any of the group departments match
+            if (!empty($departmentNames)) {
+                $hasMatch = false;
+                foreach ($departmentNames as $deptName) {
+                    if (str_contains($departments, $deptName) || str_contains($facultyDeptName, $deptName)) {
+                        $hasMatch = true;
+                        break;
+                    }
+                }
+                if (!$hasMatch) {
+                    continue;
+                }
+            }
+            
+            // Apply year filter
+            if ($year && !str_contains($years, $year)) {
+                continue;
+            }
+            
+            // Apply semester filter
+            if ($semester && !str_contains($semesters, $semester)) {
+                continue;
+            }
+            
+            // Apply search filter
+            if ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $fullName = strtolower($faculty->getFirstName() . ' ' . $faculty->getLastName());
+                $employeeId = strtolower($faculty->getEmployeeId());
+                $position = strtolower($faculty->getPosition());
+                $deptName = strtolower($facultyDeptName);
+                
+                if (!str_contains($fullName, $searchLower) && 
+                    !str_contains($employeeId, $searchLower) && 
+                    !str_contains($position, $searchLower) && 
+                    !str_contains($deptName, $searchLower)) {
+                    continue;
+                }
+            }
+            
+            $filteredFaculty[] = $item;
+        }
+        
+        // Prepare CSV data
+        $csvData = [];
+        $csvData[] = ['Employee ID', 'First Name', 'Last Name', 'Position', 'Department', 'Total Units', 'Total Subjects', 'Academic Year', 'Semester', 'Department Filter'];
+        
+        foreach ($filteredFaculty as $item) {
             $faculty = $item[0];
             $scheduleCount = $item['scheduleCount'];
             $totalUnits = $item['totalUnits'] ?? 0;
@@ -1986,12 +2192,20 @@ class AdminController extends AbstractController
                 $totalUnits,
                 $scheduleCount,
                 $year ?: 'All',
-                $semester ?: 'All'
+                $semester ?: 'All',
+                $departmentDisplayName ?: 'All'
             ];
         }
         
-        // Generate CSV
-        $filename = 'all_faculty_history_' . ($year ?: 'all_years') . '_' . ($semester ?: 'all_semesters') . '_' . date('Y-m-d') . '.csv';
+        // Generate CSV with descriptive filename
+        $filenameParts = ['faculty'];
+        if ($departmentDisplayName) $filenameParts[] = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentDisplayName));
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($searchTerm));
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.csv';
         
         $response = new Response();
         $response->headers->set('Content-Type', 'text/csv');
@@ -2006,6 +2220,234 @@ class AdminController extends AbstractController
         fclose($output);
         
         return $response;
+    }
+
+    private function exportAllRoomsPdf(array $roomsData, string $year, string $semester, string $departmentId, string $searchTerm): Response
+    {
+        // Filter rooms based on criteria (same logic as CSV export)
+        $filteredRooms = [];
+        
+        // Get department names if filtering by department (include group departments)
+        $departmentNames = [];
+        $departmentDisplayName = '';
+        if ($departmentId) {
+            $department = $this->entityManager->getRepository(\App\Entity\Department::class)->find($departmentId);
+            if ($department) {
+                // Use department group name if available, otherwise use department name
+                if ($department->getDepartmentGroup()) {
+                    $group = $department->getDepartmentGroup();
+                    $departmentDisplayName = $group->getName();
+                    // Include all departments in that group
+                    foreach ($group->getDepartments() as $groupDept) {
+                        if (!in_array($groupDept->getName(), $departmentNames)) {
+                            $departmentNames[] = $groupDept->getName();
+                        }
+                    }
+                } else {
+                    $departmentDisplayName = $department->getName();
+                    $departmentNames[] = $department->getName();
+                }
+            }
+        }
+        
+        foreach ($roomsData as $item) {
+            $room = $item[0];
+            $departments = $item['departments'] ?? '';
+            $years = $item['years'] ?? '';
+            $semesters = $item['semesters'] ?? '';
+            
+            // Apply department filter - check if any of the group departments match
+            if (!empty($departmentNames)) {
+                $hasMatch = false;
+                foreach ($departmentNames as $deptName) {
+                    if (str_contains($departments, $deptName)) {
+                        $hasMatch = true;
+                        break;
+                    }
+                }
+                if (!$hasMatch) {
+                    continue;
+                }
+            }
+            
+            // Apply year filter
+            if ($year && !str_contains($years, $year)) {
+                continue;
+            }
+            
+            // Apply semester filter
+            if ($semester && !str_contains($semesters, $semester)) {
+                continue;
+            }
+            
+            // Apply search filter
+            if ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $roomName = strtolower($room->getName());
+                $building = strtolower($room->getBuilding());
+                
+                if (!str_contains($roomName, $searchLower) && !str_contains($building, $searchLower)) {
+                    continue;
+                }
+            }
+            
+            $filteredRooms[] = $item;
+        }
+        
+        // Generate PDF using the service
+        $pdfService = new \App\Service\RoomsReportPdfService($this->entityManager);
+        $pdfContent = $pdfService->generateRoomsReportPdf($filteredRooms, $year, $semester, $departmentDisplayName, $searchTerm);
+        
+        // Generate filename
+        $filenameParts = ['rooms'];
+        if ($departmentDisplayName) $filenameParts[] = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentDisplayName));
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($searchTerm));
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.pdf';
+        
+        // Return PDF response
+        $response = new Response($pdfContent);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', 'inline; filename="' . $filename . '"');
+        
+        return $response;
+    }
+
+    private function exportAllFacultyPdf(array $facultyData, string $year, string $semester, string $departmentId, string $searchTerm): Response
+    {
+        // Filter faculty based on criteria (same logic as CSV export)
+        $filteredFaculty = [];
+        
+        // Get department names if filtering by department (include group departments)
+        $departmentNames = [];
+        $departmentDisplayName = '';
+        if ($departmentId) {
+            $department = $this->entityManager->getRepository(\App\Entity\Department::class)->find($departmentId);
+            if ($department) {
+                // Use department group name if available, otherwise use department name
+                if ($department->getDepartmentGroup()) {
+                    $group = $department->getDepartmentGroup();
+                    $departmentDisplayName = $group->getName();
+                    // Include all departments in that group
+                    foreach ($group->getDepartments() as $groupDept) {
+                        if (!in_array($groupDept->getName(), $departmentNames)) {
+                            $departmentNames[] = $groupDept->getName();
+                        }
+                    }
+                } else {
+                    $departmentDisplayName = $department->getName();
+                    $departmentNames[] = $department->getName();
+                }
+            }
+        }
+        
+        foreach ($facultyData as $item) {
+            $faculty = $item[0];
+            $departments = $item['departments'] ?? '';
+            $years = $item['years'] ?? '';
+            $semesters = $item['semesters'] ?? '';
+            $facultyDeptName = $faculty->getDepartment() ? $faculty->getDepartment()->getName() : '';
+            
+            // Apply department filter - check if any of the group departments match
+            if (!empty($departmentNames)) {
+                $hasMatch = false;
+                foreach ($departmentNames as $deptName) {
+                    if (str_contains($departments, $deptName) || str_contains($facultyDeptName, $deptName)) {
+                        $hasMatch = true;
+                        break;
+                    }
+                }
+                if (!$hasMatch) {
+                    continue;
+                }
+            }
+            
+            // Apply year filter
+            if ($year && !str_contains($years, $year)) {
+                continue;
+            }
+            
+            // Apply semester filter
+            if ($semester && !str_contains($semesters, $semester)) {
+                continue;
+            }
+            
+            // Apply search filter
+            if ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $fullName = strtolower($faculty->getFirstName() . ' ' . $faculty->getLastName());
+                $employeeId = strtolower($faculty->getEmployeeId());
+                $position = strtolower($faculty->getPosition());
+                $deptName = strtolower($facultyDeptName);
+                
+                if (!str_contains($fullName, $searchLower) && 
+                    !str_contains($employeeId, $searchLower) && 
+                    !str_contains($position, $searchLower) && 
+                    !str_contains($deptName, $searchLower)) {
+                    continue;
+                }
+            }
+            
+            $filteredFaculty[] = $item;
+        }
+        
+        // Generate PDF using the service
+        $pdfService = new \App\Service\FacultyReportPdfService($this->entityManager);
+        $pdfContent = $pdfService->generateFacultyReportPdf($filteredFaculty, $year, $semester, $departmentDisplayName, $searchTerm);
+        
+        // Generate filename
+        $filenameParts = ['faculty'];
+        if ($departmentDisplayName) $filenameParts[] = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentDisplayName));
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search_' . preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($searchTerm));
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.pdf';
+        
+        // Return PDF response
+        $response = new Response($pdfContent);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', 'inline; filename="' . $filename . '"');
+        
+        return $response;
+    }
+
+    private function exportAllSubjectsPdf(?string $year, ?string $semester, ?string $departmentId): Response
+    {
+        try {
+            // Create PDF service
+            $pdfService = new \App\Service\SubjectsReportPdfService($this->entityManager);
+            
+            // Generate PDF
+            $pdfContent = $pdfService->generateSubjectsReportPdf(
+                $year,
+                $semester,
+                $departmentId ? (int)$departmentId : null
+            );
+            
+            // Prepare filename
+            $filename = 'subjects_report_' . 
+                        ($year ?: 'all_years') . '_' . 
+                        ($semester ?: 'all_semesters') . '_' . 
+                        date('Y-m-d') . '.pdf';
+            
+            // Return PDF response
+            return new Response(
+                $pdfContent,
+                200,
+                [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="' . $filename . '"'
+                ]
+            );
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Error generating PDF: ' . $e->getMessage());
+            return $this->redirectToRoute('admin_history');
+        }
     }
 
     // User CRUD Operations
@@ -2065,24 +2507,16 @@ class AdminController extends AbstractController
                 $this->addFlash('error', 'Error creating user: ' . $e->getMessage());
             }
         } elseif ($form->isSubmitted() && !$form->isValid()) {
-            // Debug: Log form errors
             $errors = $form->getErrors(true);
-            $errorCount = 0;
             
             /** @var \Symfony\Component\Form\FormError $error */
             foreach ($errors as $error) {
-                $errorCount++;
                 $errorText = $error->getMessage();
                 if (str_contains((string)$errorText, 'CSRF token')) {
                     $this->addFlash('error', 'Form Validation Errors: • The CSRF token is invalid. Please try to resubmit the form.');
                 } else {
                     $this->addFlash('error', 'Form Validation Errors: • ' . $errorText);
                 }
-            }
-            
-            // Debug info for troubleshooting
-            if ($errorCount === 0) {
-                $this->addFlash('info', 'Form submitted but validation failed with no specific error messages.');
             }
         }
 
@@ -2523,9 +2957,9 @@ class AdminController extends AbstractController
             // Check if code is unique
             if (!$roomService->isCodeUnique($room->getCode())) {
                 $this->addFlash('error', 'Room code already exists. Please use a different code.');
-                return $this->render('admin/rooms/create.html.twig', [
+                return $this->render('admin/rooms/create.html.twig', array_merge($this->getBaseTemplateData(), [
                     'form' => $form->createView(),
-                ]);
+                ]));
             }
 
             $roomService->createRoom($room);
@@ -2547,9 +2981,9 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('admin_rooms');
         }
 
-        return $this->render('admin/rooms/create.html.twig', [
+        return $this->render('admin/rooms/create.html.twig', array_merge($this->getBaseTemplateData(), [
             'form' => $form->createView(),
-        ], new Response('', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+        ]), new Response('', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[Route('/rooms/{id}/edit', name: 'rooms_edit', methods: ['GET', 'POST'])]
@@ -2569,10 +3003,10 @@ class AdminController extends AbstractController
             // Check if code is unique (excluding current room)
             if (!$roomService->isCodeUnique($room->getCode(), $id)) {
                 $this->addFlash('error', 'Room code already exists. Please use a different code.');
-                return $this->render('admin/rooms/edit.html.twig', [
+                return $this->render('admin/rooms/edit.html.twig', array_merge($this->getBaseTemplateData(), [
                     'form' => $form->createView(),
                     'room' => $room,
-                ]);
+                ]));
             }
 
             $roomService->updateRoom($room);
@@ -2590,10 +3024,10 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('admin_rooms');
         }
 
-        return $this->render('admin/rooms/edit.html.twig', [
+        return $this->render('admin/rooms/edit.html.twig', array_merge($this->getBaseTemplateData(), [
             'form' => $form->createView(),
             'room' => $room,
-        ], new Response('', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+        ]), new Response('', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     #[Route('/rooms/{id}', name: 'rooms_view', methods: ['GET'])]
@@ -3464,7 +3898,7 @@ class AdminController extends AbstractController
 
         $totalPages = ceil($totalCount / $limit);
 
-        return $this->render('admin/logs/index.html.twig', [
+        return $this->render('admin/logs/index.html.twig', array_merge($this->getBaseTemplateData(), [
             'logs' => $logs,
             'users' => $users,
             'actions' => $actions,
@@ -3477,6 +3911,6 @@ class AdminController extends AbstractController
                 'date_from' => $filterDateFrom,
                 'date_to' => $filterDateTo,
             ],
-        ]);
+        ]));
     }
 }

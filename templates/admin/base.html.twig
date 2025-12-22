@@ -416,7 +416,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                                 </svg>
                                 Subjects
-                                <span class="bg-blue-100 text-blue-800 ml-auto text-xs px-2 py-1 rounded-full">New</span>
+                                <span class="bg-blue-100 text-blue-800 ml-auto text-xs px-2 py-1 rounded-full">{{ dashboard_data.total_subjects ?? '0' }}</span>
                             </a>
                         </div>
                     </div>
@@ -577,7 +577,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                                     </svg>
                                     Subjects
-                                    <span class="bg-blue-100 text-blue-800 ml-auto text-xs px-2 py-1 rounded-full">New</span>
+                                    <span class="bg-blue-100 text-blue-800 ml-auto text-xs px-2 py-1 rounded-full">{{ dashboard_data.total_subjects ?? '0' }}</span>
                                 </a>
                             </div>
                         </div>
@@ -682,14 +682,13 @@
                         
                         <!-- Search -->
                         <div class="hidden md:block ml-4 max-w-lg w-full">
-                            <div class="relative">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                    </svg>
-                                </div>
-                                <input type="search" placeholder="Search dashboard..."
-                                       class="block w-full pl-10 pr-3 py-2 lg:py-3 border border-gray-300 rounded-lg lg:rounded-xl leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition duration-200 text-sm lg:text-base">
+                            <div class="relative flex items-center">
+                                <svg class="absolute left-4 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="search" placeholder="Search..."
+                                       style="padding-left: 2.5rem !important;"
+                                       class="block w-full pr-3 py-2 lg:py-3 border border-gray-300 rounded-lg lg:rounded-xl leading-5 bg-gray-50 text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition duration-200 text-sm lg:text-base">
                             </div>
                         </div>
                     </div>
@@ -837,7 +836,7 @@
                     // Skip edit forms
                     if (form.getAttribute('data-edit-form') === 'true' || 
                         form.getAttribute('data-turbo') === 'false' || 
-                        form.action.includes('/edit')) {
+                        (form.action && typeof form.action === 'string' && form.action.includes('/edit'))) {
                         return; // Don't reset edit forms
                     }
                     
@@ -863,7 +862,7 @@
                     // Skip edit forms
                     if (form.getAttribute('data-edit-form') === 'true' || 
                         form.getAttribute('data-turbo') === 'false' || 
-                        form.action.includes('/edit')) {
+                        (form.action && typeof form.action === 'string' && form.action.includes('/edit'))) {
                         return; // Don't reset edit forms
                     }
                     
@@ -886,7 +885,7 @@
             // Reset all forms with autocomplete="off" EXCEPT edit forms
             document.querySelectorAll('form[autocomplete="off"]').forEach(function(form) {
                 // Skip forms that have data-turbo="false" or are edit forms
-                if (form.getAttribute('data-turbo') === 'false' || form.action.includes('/edit')) {
+                if (form.getAttribute('data-turbo') === 'false' || (form.action && typeof form.action === 'string' && form.action.includes('/edit'))) {
                     return; // Don't reset edit forms
                 }
                 
@@ -917,7 +916,7 @@
                 // Skip edit forms
                 if (form.getAttribute('data-edit-form') === 'true' || 
                     form.getAttribute('data-turbo') === 'false' || 
-                    form.action.includes('/edit')) {
+                    (form.action && typeof form.action === 'string' && form.action.includes('/edit'))) {
                     return; // Don't reset edit forms
                 }
                 

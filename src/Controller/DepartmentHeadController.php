@@ -891,31 +891,42 @@ class DepartmentHeadController extends AbstractController
         $activeAcademicYear = $this->systemSettingsService->getActiveAcademicYear();
         $activeSemester = $this->systemSettingsService->getActiveSemester();
         
-        // Get subjects from department - filter by active semester if available
-        if ($activeSemester) {
-            // Get subjects that are in curriculum terms matching the active semester
-            $subjects = $this->entityManager->createQueryBuilder()
-                ->select('DISTINCT s')
-                ->from('App\Entity\Subject', 's')
-                ->innerJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = s')
-                ->innerJoin('App\Entity\CurriculumTerm', 'ct', 'WITH', 'cs.curriculumTerm = ct')
-                ->innerJoin('App\Entity\Curriculum', 'c', 'WITH', 'ct.curriculum = c')
-                ->where('s.department = :dept')
-                ->andWhere('s.isActive = :active')
-                ->andWhere('ct.semester = :semester')
-                ->andWhere('c.isPublished = :published')
-                ->setParameter('dept', $department)
-                ->setParameter('active', true)
-                ->setParameter('semester', $activeSemester)
-                ->setParameter('published', true)
-                ->orderBy('s.code', 'ASC')
+        // Get ALL subjects from department with their semester information
+        // The frontend JavaScript will handle showing/hiding based on semester
+        $subjects = $this->entityManager->createQueryBuilder()
+            ->select('DISTINCT s')
+            ->from('App\Entity\Subject', 's')
+            ->innerJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = s')
+            ->innerJoin('App\Entity\CurriculumTerm', 'ct', 'WITH', 'cs.curriculumTerm = ct')
+            ->innerJoin('App\Entity\Curriculum', 'c', 'WITH', 'ct.curriculum = c')
+            ->where('s.department = :dept')
+            ->andWhere('s.isActive = :active')
+            ->andWhere('c.isPublished = :published')
+            ->setParameter('dept', $department)
+            ->setParameter('active', true)
+            ->setParameter('published', true)
+            ->orderBy('s.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+        
+        // Enrich subjects with semester information
+        foreach ($subjects as &$subject) {
+            // Get all semesters this subject appears in
+            $semesters = $this->entityManager->createQueryBuilder()
+                ->select('DISTINCT ct.semester')
+                ->from('App\Entity\CurriculumSubject', 'cs')
+                ->innerJoin('cs.curriculumTerm', 'ct')
+                ->where('cs.subject = :subject')
+                ->setParameter('subject', $subject)
                 ->getQuery()
-                ->getResult();
-        } else {
-            $subjects = $this->subjectRepository->findBy(
-                ['department' => $department, 'isActive' => true],
-                ['code' => 'ASC']
-            );
+                ->getScalarResult();
+            
+            // Add semester as a property (we'll use the first one for filtering)
+            if (!empty($semesters)) {
+                $subject->semester = $semesters[0]['semester'];
+            } else {
+                $subject->semester = ''; // No semester info
+            }
         }
         
         // Get rooms accessible to department
@@ -1078,6 +1089,7 @@ class DepartmentHeadController extends AbstractController
             'academicYears' => $academicYears,
             'activeAcademicYear' => $activeAcademicYear,
             'activeSemester' => $activeSemester,
+            'semesterFilter' => $activeSemester,
             'selectedDepartment' => $department,
             'departmentId' => $department->getId(),
             'isDepartmentHead' => true,
@@ -1450,29 +1462,21 @@ class DepartmentHeadController extends AbstractController
     #[Route('/schedules/existing-sections/{subjectId}', name: 'schedules_existing_sections', methods: ['GET'])]
     public function getExistingSections(int $subjectId): JsonResponse
     {
-        error_log("=== Department Head getExistingSections called ===");
-        error_log("Subject ID: " . $subjectId);
-        
         /** @var User $user */
         $user = $this->getUser();
         if (!$user) {
-            error_log("ERROR: No user found");
             return $this->json(['error' => 'Unauthorized'], 401);
         }
 
         $department = $user->getDepartment();
         if (!$department) {
-            error_log("ERROR: User has no department");
             return $this->json(['error' => 'No department assigned'], 404);
         }
-        
-        error_log("User: " . $user->getEmail() . ", Department: " . $department->getName());
 
         try {
             // Verify the subject belongs to this department
             $subject = $this->subjectRepository->find($subjectId);
             if (!$subject) {
-                error_log("ERROR: Subject not found with ID: " . $subjectId);
                 return $this->json([
                     'sections' => [],
                     'schedules' => [],
@@ -1480,11 +1484,7 @@ class DepartmentHeadController extends AbstractController
                 ], 404);
             }
             
-            error_log("Subject found: " . $subject->getCode() . " - " . $subject->getTitle());
-            error_log("Subject department: " . ($subject->getDepartment() ? $subject->getDepartment()->getName() : 'NULL'));
-            
             if ($subject->getDepartment()->getId() !== $department->getId()) {
-                error_log("ERROR: Subject belongs to different department");
                 return $this->json([
                     'sections' => [],
                     'schedules' => [],
@@ -1500,8 +1500,6 @@ class DepartmentHeadController extends AbstractController
                 ->setParameter('subjectId', $subjectId)
                 ->getQuery()
                 ->getResult();
-            
-            error_log("Found " . count($schedules) . " schedules for this subject");
 
             // Extract unique sections and build schedule map
             $sections = [];
@@ -1512,8 +1510,6 @@ class DepartmentHeadController extends AbstractController
                 $semester = $schedule['semester'];
                 $year = $schedule['year'];
                 $yearId = $schedule['yearId'];
-                
-                error_log("  - Section: $section, Semester: $semester, Year: $year, YearId: $yearId");
                 
                 // Add to unique sections list
                 if (!in_array($section, $sections)) {
@@ -1529,15 +1525,10 @@ class DepartmentHeadController extends AbstractController
                     'year' => $year,
                     'yearId' => $yearId
                 ];
-                error_log("  - Created map key: $key");
             }
             
             // Sort sections alphabetically
             sort($sections);
-            
-            error_log("Returning " . count($sections) . " unique sections");
-            error_log("Sections: " . implode(', ', $sections));
-            error_log("Map keys: " . implode(', ', array_keys($schedulesMap)));
             
             return $this->json([
                 'sections' => $sections,
@@ -1901,9 +1892,6 @@ class DepartmentHeadController extends AbstractController
                 ]
             );
         } catch (\Exception $e) {
-            // Log the full error for debugging
-            error_log('PDF Generation Error: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
             $this->addFlash('error', 'Error generating PDF: ' . $e->getMessage());
             return $this->redirectToRoute('department_head_faculty_assignments');
         }

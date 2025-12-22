@@ -198,9 +198,15 @@
                 </svg>
             </div>
             <div class="ml-3 flex-1">
-                <h3 class="text-sm font-semibold text-purple-800"> Subject Filter Active</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-purple-800"> Subject Filter Active</h3>
+                    <select id="semester-view-filter" class="text-xs px-3 py-1.5 border border-purple-300 rounded-lg bg-white text-purple-700 font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 transition" onchange="filterSubjectsBySemester()">
+                        <option value="active" selected>Active Semester Only</option>
+                        <option value="all">All Semesters</option>
+                    </select>
+                </div>
                 <div class="mt-2 text-sm text-purple-700">
-                    Showing only <strong>{{ semesterFilter }}</strong> semester subjects.
+                    <span id="filter-status-text">Showing only <strong>{{ semesterFilter }}</strong> semester subjects.</span>
                 </div>
             </div>
         </div>
@@ -237,7 +243,9 @@
                                     <option value="{{ subject.id }}" 
                                             data-subject-code="{{ subject.code }}"
                                             data-subject-title="{{ subject.title }}"
-                                            data-subject-units="{{ subject.units }}">
+                                            data-subject-units="{{ subject.units }}"
+                                            data-subject-semester="{{ subject.semester }}"
+                                            class="subject-option subject-semester-{{ subject.semester }}">
                                         {{ subject.code }} - {{ subject.title }} ({{ subject.units }} units)
                                     </option>
                                 {% endfor %}
@@ -1255,10 +1263,67 @@ document.getElementById('day_pattern').addEventListener('change', checkForConfli
 document.getElementById('start_time').addEventListener('change', checkForConflicts);
 document.getElementById('end_time').addEventListener('change', checkForConflicts);
 
+// Filter subjects by semester dropdown
+function filterSubjectsBySemester() {
+    const filterSelect = document.getElementById('semester-view-filter');
+    const subjectSelect = document.getElementById('subject');
+    const filterStatusText = document.getElementById('filter-status-text');
+    const activeSemester = '{{ activeSemester }}';
+    
+    const filterValue = filterSelect.value;
+    const options = subjectSelect.querySelectorAll('option');
+    
+    let visibleCount = 0;
+    
+    options.forEach(option => {
+        if (option.value === '') {
+            // Keep the "Choose a subject..." option always visible
+            option.style.display = '';
+            return;
+        }
+        
+        const subjectSemester = option.getAttribute('data-subject-semester');
+        
+        if (filterValue === 'active') {
+            // Show only active semester subjects
+            if (subjectSemester === activeSemester) {
+                option.style.display = '';
+                visibleCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        } else {
+            // Show all subjects
+            option.style.display = '';
+            visibleCount++;
+        }
+    });
+    
+    // Update status text
+    if (filterValue === 'active') {
+        filterStatusText.innerHTML = `Showing only <strong>${activeSemester}</strong> semester subjects. (${visibleCount} subjects)`;
+    } else {
+        filterStatusText.innerHTML = `Showing <strong>all</strong> semester subjects for reference. (${visibleCount} subjects)`;
+    }
+    
+    // Reset the subject selection if current selection is now hidden
+    const currentSelection = subjectSelect.value;
+    if (currentSelection) {
+        const currentOption = subjectSelect.querySelector(`option[value="${currentSelection}"]`);
+        if (currentOption && currentOption.style.display === 'none') {
+            subjectSelect.value = '';
+            updateSubjectInfo();
+        }
+    }
+}
+
 // Auto-update existing sections display if semester/year are pre-selected
 window.addEventListener('DOMContentLoaded', function() {
     const semester = document.getElementById('semester').value;
     const academicYear = document.getElementById('academic_year').value;
+    
+    // Apply the default filter on page load
+    filterSubjectsBySemester();
     
     // If both are pre-selected (active semester), update the display
     if (semester && academicYear) {

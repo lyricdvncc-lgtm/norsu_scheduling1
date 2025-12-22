@@ -280,8 +280,8 @@ $(document).ready(function() {
 
     // Move search to filters container and style it
     $('.dataTables_filter').prependTo('#filtersContainer');
-    $('.dataTables_filter input').addClass('w-64 pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors');
-    $('.dataTables_filter').addClass('relative').prepend('<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg></div>');
+    $('.dataTables_filter input').addClass('w-64 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors font-normal').css('padding-left', '2.5rem');
+    $('.dataTables_filter').addClass('relative flex items-center').prepend('<svg class="absolute left-4 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>');
     
     // Prevent Enter key from submitting
     $('.dataTables_filter input').on('keypress', function(e) {

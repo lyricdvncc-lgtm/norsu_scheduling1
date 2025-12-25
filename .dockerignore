@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env*
+node_modules
+var/cache/*
+var/log/*
+var/sessions/*
+tests/
+.idea/
+.vscode/
+*.md
+compose*.yaml
+watch-css.bat
+phpunit.dist.xml

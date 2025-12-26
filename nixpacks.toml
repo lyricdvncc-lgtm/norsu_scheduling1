@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["php82", "php82Extensions.gd", "php82Extensions.zip"]
+
+[phases.install]
+cmds = ["composer install --optimize-autoloader --no-dev --no-interaction"]
+
+[start]
+cmd = "frankenphp php-server --listen 0.0.0.0:$PORT"

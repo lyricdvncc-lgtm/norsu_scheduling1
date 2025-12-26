@@ -52,3 +52,8 @@ yarn-error.log*
 ###> uploads ###
 /public/uploads/
 ###< uploads ###
+
+###> production documentation ###
+PRODUCTION_READINESS.md
+QUICK_START_PRODUCTION.md
+###< production documentation ###

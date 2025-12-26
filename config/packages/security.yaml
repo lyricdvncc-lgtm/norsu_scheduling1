@@ -40,12 +40,30 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
+        - { path: ^/health, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/department-head, roles: ROLE_DEPARTMENT_HEAD }
         - { path: ^/faculty, roles: ROLE_FACULTY }
         - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+
+when@prod:
+    security:
+        firewalls:
+            main:
+                # Require HTTPS in production
+                require_previous_session: false
+        
+        # Enable login rate limiting
+        access_control:
+            - { path: ^/health, roles: PUBLIC_ACCESS }
+            - { path: ^/login, roles: PUBLIC_ACCESS }
+            - { path: ^/register, roles: PUBLIC_ACCESS }
+            - { path: ^/admin, roles: ROLE_ADMIN }
+            - { path: ^/department-head, roles: ROLE_DEPARTMENT_HEAD }
+            - { path: ^/faculty, roles: ROLE_FACULTY }
+            - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
     security:

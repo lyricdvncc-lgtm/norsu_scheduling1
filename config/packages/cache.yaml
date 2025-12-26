@@ -1,7 +1,7 @@
 framework:
     cache:
         # Unique name of your app: used to compute stable namespaces for cache keys.
-        #prefix_seed: your_vendor_name/app_name
+        prefix_seed: norsu/scheduling_system
 
         # The "app" cache stores to the filesystem by default.
         # The data in this cache should persist between deploys.
@@ -17,3 +17,18 @@ framework:
         # Namespaced pools use the above "app" backend by default
         #pools:
             #my.dedicated.cache: null
+
+when@prod:
+    framework:
+        cache:
+            # Use Redis for production (uncomment and configure REDIS_URL in .env.prod)
+            # app: cache.adapter.redis
+            # default_redis_provider: '%env(REDIS_URL)%'
+            
+            # Or use APCu for single-server setups
+            app: cache.adapter.apcu
+            
+            pools:
+                cache.app:
+                    adapter: cache.adapter.apcu
+                    default_lifetime: 3600

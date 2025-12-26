@@ -1,8 +1,8 @@
 [phases.setup]
-cmds = ["install-php-extensions gd zip exif pcntl pdo_mysql"]
+cmds = ["install-php-extensions gd zip exif"]
 
 [phases.install]
-cmds = ["composer install --optimize-autoloader --no-dev --no-interaction --no-scripts"]
+cmds = ["composer install --optimize-autoloader --no-dev --no-interaction"]
 
 [start]
 cmd = "frankenphp php-server --listen 0.0.0.0:$PORT"

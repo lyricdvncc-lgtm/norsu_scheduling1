@@ -77,9 +77,20 @@ class ScheduleController extends AbstractController
             $selectedDepartment = $this->entityManager->getRepository(\App\Entity\Department::class)->find($departmentId);
         }
         
-        // Get schedules - filter by department if one is selected
+        // Check if a room filter is requested
+        $roomFilter = $request->query->get('room');
+        
+        // Get schedules - if room filter is specified, ignore department filter
+        // Otherwise, filter by department if one is selected
         // Always filter by active academic year and semester
-        if ($selectedDepartment) {
+        if ($roomFilter) {
+            // When filtering by room, show ALL schedules in that room (cross-department)
+            $schedules = $this->scheduleRepository->findByRoom(
+                $roomFilter,
+                $activeYear,
+                $activeSemester
+            );
+        } elseif ($selectedDepartment) {
             $schedules = $this->scheduleRepository->findByDepartment(
                 $selectedDepartment->getId(),
                 $activeYear,
@@ -116,6 +127,12 @@ class ScheduleController extends AbstractController
             $rooms = $this->roomRepository->findAll();
         }
         
+        // Get the selected room info if filtering by room
+        $selectedRoom = null;
+        if ($roomFilter) {
+            $selectedRoom = $this->entityManager->getRepository(\App\Entity\Room::class)->find($roomFilter);
+        }
+        
         // Group schedules by subject for block display
         $groupedSchedules = [];
         foreach ($schedules as $schedule) {
@@ -137,6 +154,7 @@ class ScheduleController extends AbstractController
             'departments' => $departments,
             'rooms' => $rooms,
             'selectedDepartment' => $selectedDepartment,
+            'selectedRoom' => $selectedRoom,
             'activeSemesterDisplay' => $this->systemSettingsService->getActiveSemesterDisplay(),
             'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
             'dashboard_data' => $this->dashboardService->getAdminDashboardData(),

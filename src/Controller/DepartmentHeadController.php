@@ -852,21 +852,20 @@ class DepartmentHeadController extends AbstractController
             $activeSemester
         );
 
-        // Group schedules by subject code
+        // Group schedules by subject + semester + academic year (block sectioning)
         $groupedSchedules = [];
         foreach ($schedules as $schedule) {
-            $subjectCode = $schedule->getSubject()->getCode();
-            if (!isset($groupedSchedules[$subjectCode])) {
-                $groupedSchedules[$subjectCode] = [
+            $subjectKey = $schedule->getSubject()->getId() . '_' . $schedule->getSemester() . '_' . $schedule->getAcademicYear()->getId();
+            if (!isset($groupedSchedules[$subjectKey])) {
+                $groupedSchedules[$subjectKey] = [
                     'subject' => $schedule->getSubject(),
-                    'schedules' => []
+                    'semester' => $schedule->getSemester(),
+                    'academicYear' => $schedule->getAcademicYear(),
+                    'sections' => []
                 ];
             }
-            $groupedSchedules[$subjectCode]['schedules'][] = $schedule;
+            $groupedSchedules[$subjectKey]['sections'][] = $schedule;
         }
-
-        // Sort by subject code
-        ksort($groupedSchedules);
 
         return $this->render('department_head/schedules/list.html.twig', array_merge($this->getBaseTemplateData(), [
             'page_title' => 'Department Schedules',
@@ -1240,6 +1239,60 @@ class DepartmentHeadController extends AbstractController
         }
     }
 
+    #[Route('/schedules/room-schedules/{roomId}/{semester}/{yearId}', name: 'schedules_room_schedules', methods: ['GET'])]
+    public function getRoomSchedules(int $roomId, string $semester, int $yearId): JsonResponse
+    {
+        try {
+            $room = $this->entityManager->getRepository(Room::class)->find($roomId);
+            $academicYear = $this->academicYearRepository->find($yearId);
+            
+            if (!$room || !$academicYear) {
+                return new JsonResponse([
+                    'schedules' => [],
+                    'error' => 'Room or academic year not found'
+                ]);
+            }
+            
+            // Get all schedules for this room in this semester/year
+            $schedules = $this->scheduleRepository->createQueryBuilder('s')
+                ->where('s.room = :room')
+                ->andWhere('s.semester = :semester')
+                ->andWhere('s.academicYear = :year')
+                ->andWhere('s.status = :status')
+                ->setParameter('room', $room)
+                ->setParameter('semester', $semester)
+                ->setParameter('year', $academicYear)
+                ->setParameter('status', 'active')
+                ->getQuery()
+                ->getResult();
+            
+            $scheduleData = [];
+            foreach ($schedules as $schedule) {
+                $scheduleData[] = [
+                    'id' => $schedule->getId(),
+                    'subjectCode' => $schedule->getSubject()->getCode(),
+                    'section' => $schedule->getSection(),
+                    'dayPattern' => $schedule->getDayPattern(),
+                    'startTime' => $schedule->getStartTime()->format('H:i'),
+                    'endTime' => $schedule->getEndTime()->format('H:i'),
+                    'roomId' => $schedule->getRoom()->getId(),
+                    'semester' => $schedule->getSemester(),
+                    'yearId' => $schedule->getAcademicYear()->getId()
+                ];
+            }
+            
+            return new JsonResponse([
+                'schedules' => $scheduleData
+            ]);
+            
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'schedules' => [],
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     #[Route('/schedules/check-room-conflicts', name: 'schedules_check_room_conflicts', methods: ['POST'])]
     public function checkRoomConflicts(Request $request): JsonResponse
     {
@@ -1494,16 +1547,23 @@ class DepartmentHeadController extends AbstractController
 
             // Get all schedules for this subject
             $schedules = $this->scheduleRepository->createQueryBuilder('s')
-                ->select('s.section', 's.semester', 'ay.year', 'ay.id as yearId')
+                ->select('s.id', 's.section', 's.semester', 's.dayPattern', 's.startTime', 's.endTime', 
+                         'ay.year', 'ay.id as yearId', 'r.code as roomCode', 's.status')
                 ->leftJoin('s.academicYear', 'ay')
+                ->leftJoin('s.room', 'r')
                 ->where('s.subject = :subjectId')
+                ->andWhere('s.status = :status')
                 ->setParameter('subjectId', $subjectId)
+                ->setParameter('status', 'active')
+                ->orderBy('s.semester', 'ASC')
+                ->addOrderBy('s.section', 'ASC')
                 ->getQuery()
                 ->getResult();
 
             // Extract unique sections and build schedule map
             $sections = [];
             $schedulesMap = [];
+            $fullScheduleDetails = [];
             
             foreach ($schedules as $schedule) {
                 $section = $schedule['section'];
@@ -1523,7 +1583,25 @@ class DepartmentHeadController extends AbstractController
                     'section' => $section,
                     'semester' => $semester,
                     'year' => $year,
-                    'yearId' => $yearId
+                    'yearId' => $yearId,
+                    'roomCode' => $schedule['roomCode'],
+                    'dayPattern' => $schedule['dayPattern'],
+                    'startTime' => $schedule['startTime']->format('H:i'),
+                    'endTime' => $schedule['endTime']->format('H:i')
+                ];
+                
+                // Add full details for display
+                $fullScheduleDetails[] = [
+                    'id' => $schedule['id'],
+                    'section' => $section,
+                    'semester' => $semester,
+                    'year' => $year,
+                    'yearId' => $yearId,
+                    'roomCode' => $schedule['roomCode'],
+                    'dayPattern' => $schedule['dayPattern'],
+                    'startTime' => $schedule['startTime']->format('H:i'),
+                    'endTime' => $schedule['endTime']->format('H:i'),
+                    'status' => $schedule['status']
                 ];
             }
             
@@ -1533,6 +1611,7 @@ class DepartmentHeadController extends AbstractController
             return $this->json([
                 'sections' => $sections,
                 'schedules' => $schedulesMap,
+                'scheduleDetails' => $fullScheduleDetails,
                 'count' => count($sections)
             ]);
             

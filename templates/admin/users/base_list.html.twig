@@ -429,6 +429,14 @@
     </div>
 
     <!-- Old pagination removed - DataTables handles pagination now -->
+    
+    <!-- Loading Overlay -->
+    <div id="tableLoadingOverlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <p class="text-gray-700 mt-4 font-medium">Loading users...</p>
+        </div>
+    </div>
 </div>
 
 {% block javascripts %}
@@ -440,10 +448,14 @@
 
 <script>
 $(document).ready(function() {
+    // Show loading overlay
+    $('#tableLoadingOverlay').removeClass('hidden');
+    
     // Check if table has no rows
     const hasNoRows = $('#usersTable tbody tr td[colspan]').length > 0;
     if (hasNoRows) {
         console.log('No users to display - DataTables not initialized');
+        $('#tableLoadingOverlay').addClass('hidden');
         return;
     }
     
@@ -493,6 +505,10 @@ $(document).ready(function() {
                 const lengthControl = $('.dataTables_length').detach();
                 $('#customLengthControl').append(lengthControl);
             }
+        },
+        initComplete: function() {
+            // Hide loading overlay when table is ready
+            $('#tableLoadingOverlay').addClass('hidden');
         }
     });
 
@@ -659,6 +675,12 @@ function bulkAction(action) {
         return;
     }
 
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('tableLoadingOverlay');
+    const loadingText = loadingOverlay.querySelector('p');
+    loadingText.textContent = `Processing ${actionText} for ${userIds.length} user(s)...`;
+    loadingOverlay.classList.remove('hidden');
+
     fetch('{{ path('admin_api_users_bulk_action') }}', {
         method: 'POST',
         headers: {
@@ -675,11 +697,13 @@ function bulkAction(action) {
         if (data.success) {
             location.reload();
         } else {
+            loadingOverlay.classList.add('hidden');
             alert('Error: ' + data.message);
         }
     })
     .catch(error => {
         console.error('Error:', error);
+        loadingOverlay.classList.add('hidden');
         alert('An error occurred while performing the bulk action.');
     });
 }

@@ -93,8 +93,8 @@ class Schedule
             return ['Monday', 'Wednesday', 'Friday'];
         } elseif ($pattern === 'T-TH') {
             return ['Tuesday', 'Thursday'];
-        } elseif ($pattern === 'M-T-W-TH-F') {
-            return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        } elseif ($pattern === 'M-T-TH-F') {
+            return ['Monday', 'Tuesday', 'Thursday', 'Friday'];
         } elseif ($pattern === 'M-T') {
             return ['Monday', 'Tuesday'];
         } elseif ($pattern === 'TH-F') {
@@ -113,7 +113,7 @@ class Schedule
         $labels = [
             'M-W-F' => 'Monday-Wednesday-Friday',
             'T-TH' => 'Tuesday-Thursday',
-            'M-T-W-TH-F' => 'Monday-Tuesday-Wednesday-Thursday-Friday',
+            'M-T-TH-F' => 'Monday-Tuesday-Thursday-Friday',
             'M-T' => 'Monday-Tuesday',
             'TH-F' => 'Thursday-Friday',
             'SAT' => 'Saturday',

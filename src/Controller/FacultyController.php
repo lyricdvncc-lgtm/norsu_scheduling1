@@ -142,19 +142,19 @@ class FacultyController extends AbstractController
         
         switch ($dayOfWeek) {
             case 'Monday':
-                $patterns = ['M-W-F', 'M-T-W-TH-F', 'M-T'];
+                $patterns = ['M-W-F', 'M-T-TH-F', 'M-T'];
                 break;
             case 'Tuesday':
-                $patterns = ['T-TH', 'M-T-W-TH-F', 'M-T'];
+                $patterns = ['T-TH', 'M-T-TH-F', 'M-T'];
                 break;
             case 'Wednesday':
-                $patterns = ['M-W-F', 'M-T-W-TH-F'];
+                $patterns = ['M-W-F'];
                 break;
             case 'Thursday':
-                $patterns = ['T-TH', 'M-T-W-TH-F', 'TH-F'];
+                $patterns = ['T-TH', 'M-T-TH-F', 'TH-F'];
                 break;
             case 'Friday':
-                $patterns = ['M-W-F', 'M-T-W-TH-F', 'TH-F'];
+                $patterns = ['M-W-F', 'M-T-TH-F', 'TH-F'];
                 break;
             case 'Saturday':
                 $patterns = ['SAT'];

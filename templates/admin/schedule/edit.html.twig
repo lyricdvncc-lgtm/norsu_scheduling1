@@ -167,7 +167,7 @@
                                 <option value="">Select pattern...</option>
                                 <option value="M-W-F" {% if schedule.dayPattern == 'M-W-F' %}selected{% endif %}>Mon-Wed-Fri</option>
                                 <option value="T-TH" {% if schedule.dayPattern == 'T-TH' %}selected{% endif %}>Tue-Thu</option>
-                                <option value="M-T-W-TH-F" {% if schedule.dayPattern == 'M-T-W-TH-F' %}selected{% endif %}>Mon-Fri (Daily)</option>
+                                <option value="M-T-TH-F" {% if schedule.dayPattern == 'M-T-TH-F' %}selected{% endif %}>Mon-Tue-Thu-Fri (Daily)</option>
                                 <option value="M-T" {% if schedule.dayPattern == 'M-T' %}selected{% endif %}>Mon-Tue</option>
                                 <option value="TH-F" {% if schedule.dayPattern == 'TH-F' %}selected{% endif %}>Thu-Fri</option>
                                 <option value="SAT" {% if schedule.dayPattern == 'SAT' %}selected{% endif %}>Saturday Only</option>
@@ -575,7 +575,7 @@ function updatePreview() {
         const dayLabels = {
             'M-W-F': 'Mon/Wed/Fri',
             'T-TH': 'Tue/Thu',
-            'M-T-W-TH-F': 'Mon-Fri',
+            'M-T-TH-F': 'Mon/Tue/Thu/Fri',
             'M-T': 'Mon/Tue',
             'TH-F': 'Thu/Fri',
             'SAT': 'Saturday',

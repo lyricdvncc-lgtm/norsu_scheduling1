@@ -186,7 +186,7 @@ The system has three main user roles:
    - Subject
    - Faculty
    - Room
-   - Day Pattern (MWF, TTH, etc.)
+   - Day Pattern (M-W-F, T-TH, M-T-TH-F, etc.) - Note: Wednesday is reserved for events
    - Time slots
 3. System automatically checks for conflicts
 4. Save schedule

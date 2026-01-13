@@ -7,6 +7,7 @@ use App\Entity\AcademicYear;
 use App\Entity\User;
 use App\Form\FacultyProfileFormType;
 use App\Service\SystemSettingsService;
+use App\Service\TeachingLoadPdfService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,13 +22,16 @@ class FacultyController extends AbstractController
 {
     private EntityManagerInterface $entityManager;
     private SystemSettingsService $systemSettingsService;
+    private TeachingLoadPdfService $teachingLoadPdfService;
 
     public function __construct(
         EntityManagerInterface $entityManager,
-        SystemSettingsService $systemSettingsService
+        SystemSettingsService $systemSettingsService,
+        TeachingLoadPdfService $teachingLoadPdfService
     ) {
         $this->entityManager = $entityManager;
         $this->systemSettingsService = $systemSettingsService;
+        $this->teachingLoadPdfService = $teachingLoadPdfService;
     }
 
     private function getBaseTemplateData(): array
@@ -263,6 +267,42 @@ class FacultyController extends AbstractController
             [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'attachment; filename="teaching-schedule.pdf"'
+            ]
+        );
+    }
+
+    #[Route('/schedule/teaching-load-pdf', name: 'schedule_teaching_load_pdf')]
+    public function exportTeachingLoadPdf(Request $request): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        
+        // Get current academic year
+        $currentAcademicYear = $this->entityManager->getRepository(AcademicYear::class)
+            ->findOneBy(['isCurrent' => true]);
+        
+        if (!$currentAcademicYear) {
+            $this->addFlash('error', 'No active academic year found.');
+            return $this->redirectToRoute('faculty_schedule');
+        }
+        
+        // Get selected semester or default to current
+        $selectedSemester = $request->query->get('semester', $user->getPreferredSemesterFilter() ?? '1');
+        
+        // Generate Teaching Load PDF using the service
+        $pdfContent = $this->teachingLoadPdfService->generateTeachingLoadPdf($user, $currentAcademicYear, $selectedSemester);
+        
+        // Generate filename
+        $facultyName = str_replace(' ', '_', $user->getFirstName() . '_' . $user->getLastName());
+        $filename = 'Teaching_Load_' . $facultyName . '_' . $currentAcademicYear->getYear() . '_Sem' . $selectedSemester . '.pdf';
+        
+        // Return PDF as response
+        return new Response(
+            $pdfContent,
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"'
             ]
         );
     }

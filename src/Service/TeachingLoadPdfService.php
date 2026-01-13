@@ -451,23 +451,34 @@ class TeachingLoadPdfService
 
     private function generateFooterSection(TCPDF $pdf): void
     {
-        // Position signature section at a fixed Y position near the bottom
-        $signatureStartY = 215; // Fixed position for legal paper
+        // Calculate footer position from the bottom of the page
+        // Legal paper height is 355.6mm, with bottom margin of 8mm
+        $pageHeight = $pdf->getPageHeight();
+        $bottomMargin = 8;
+        
+        // Footer table dimensions
+        $footerTableHeight = 12; // 3 rows * 4mm
+        $gapBeforeTable = 2;
+        
+        // Calculate starting Y position (work backwards from bottom)
+        $footerTableY = $pageHeight - $bottomMargin - $footerTableHeight;
+        $presidentSectionY = $footerTableY - $gapBeforeTable - 25; // President section needs ~25mm
+        $signatureStartY = $presidentSectionY - 25; // Two-column signatures need ~25mm
         
         $pdf->SetFont('times', '', 11);
         
-        // Signature section at fixed Y position
+        // Signature section at calculated Y position
         $pdf->SetY($signatureStartY);
         
-        // Left side - Attested by (centered at fixed position)
+        // Left side - Attested by (centered at calculated position)
         $pdf->SetXY(15, $signatureStartY);
         $pdf->Cell(90, 5, 'Attested by:', 0, 0, 'C');
         
-        // Right side - Recommending Approval (centered at fixed position)
+        // Right side - Recommending Approval (centered at calculated position)
         $pdf->SetXY(110, $signatureStartY);
         $pdf->Cell(85, 5, 'Recommending Approval:', 0, 1, 'C');
         
-        // Names at fixed position
+        // Names at calculated position
         $nameY = $signatureStartY + 10;
         $pdf->SetFont('times', 'B', 11);
         $pdf->SetXY(15, $nameY);
@@ -476,13 +487,13 @@ class TeachingLoadPdfService
         $pdf->SetXY(110, $nameY);
         $pdf->Cell(85, 5, 'ROSE MARIE T. PINILI, E.d., Ph.D.', 0, 1, 'C');
         
-        // Draw lines under names at fixed position
+        // Draw lines under names at calculated position
         $pdf->SetLineWidth(0.3);
         $lineY = $nameY + 5;
         $pdf->Line(25, $lineY, 95, $lineY); // Left line
         $pdf->Line(120, $lineY, 185, $lineY); // Right line
         
-        // Titles at fixed position
+        // Titles at calculated position
         $pdf->SetFont('times', '', 11);
         $titleY = $lineY + 1;
         $pdf->SetXY(15, $titleY);
@@ -490,7 +501,7 @@ class TeachingLoadPdfService
         $pdf->SetXY(110, $titleY);
         $pdf->Cell(85, 5, 'Vice President for Academic Affairs', 0, 1, 'C');
         
-        // Approved section at fixed position
+        // Approved section at calculated position
         $approvedY = $titleY + 10;
         $pdf->SetXY(0, $approvedY);
         $pdf->Cell(0, 5, 'Approved:', 0, 1, 'C');
@@ -500,7 +511,7 @@ class TeachingLoadPdfService
         $pdf->SetXY(0, $approvedNameY);
         $pdf->Cell(0, 5, 'Hon. NOEL MARJON E. YASI, Psy.D.', 0, 1, 'C');
         
-        // Draw line under president name at fixed position
+        // Draw line under president name at calculated position
         $approvedLineY = $approvedNameY + 5;
         $pdf->Line(($pdf->getPageWidth() - 130) / 2, $approvedLineY, ($pdf->getPageWidth() + 130) / 2, $approvedLineY);
         
@@ -508,21 +519,18 @@ class TeachingLoadPdfService
         $pdf->SetXY(0, $approvedLineY + 1);
         $pdf->Cell(0, 5, 'University President', 0, 1, 'C');
         
-        // Footer table - always at the bottom
-        $this->generateFooterTable($pdf);
+        // Footer table - always at the absolute bottom
+        $this->generateFooterTable($pdf, $footerTableY);
     }
 
-    private function generateFooterTable(TCPDF $pdf): void
+    private function generateFooterTable(TCPDF $pdf, float $footerTableY): void
     {
-        // Adjust gap between signature and table (increase number for more space)
-        $pdf->Ln(2);
-        
         // Set thin border for footer table
         $pdf->SetLineWidth(0.2);
         $pdf->SetFont('times', 'B', 8);
         
-        // Position the table dynamically from current Y position
-        $bottomY = $pdf->GetY();
+        // Position the table at the specified Y position (calculated from bottom)
+        $bottomY = $footerTableY;
         
         // Calculate center position
         $tableWidth = 180;

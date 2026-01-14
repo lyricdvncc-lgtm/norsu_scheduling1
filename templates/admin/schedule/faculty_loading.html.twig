@@ -1182,18 +1182,60 @@ function timesOverlap(start1, end1, start2, end2) {
     return (s1 < e2 && e1 > s2) && !(e1 === s2 || e2 === s1);
 }
 
+// Helper function to parse day pattern into actual day names
+function parseDayPattern(pattern) {
+    const days = [];
+    pattern = pattern.toUpperCase().trim();
+    
+    // Handle special patterns
+    if (pattern.includes('M-T-TH-F') || pattern.includes('MTTHF')) {
+        return ['MONDAY', 'TUESDAY', 'THURSDAY', 'FRIDAY'];
+    }
+    if (pattern.includes('MON-SAT')) {
+        return ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    }
+    
+    // Replace matched patterns with placeholders to avoid double-matching
+    let marked = pattern;
+    
+    // Handle multi-character days first (must check before single chars)
+    if (marked.includes('TH')) {
+        days.push('THURSDAY');
+        marked = marked.replace(/TH/g, '##');
+    }
+    if (marked.includes('SU')) {
+        days.push('SUNDAY');
+        marked = marked.replace(/SU/g, '##');
+    }
+    if (marked.includes('SAT')) {
+        days.push('SATURDAY');
+        marked = marked.replace(/SAT/g, '##');
+    } else if (marked.includes('SA')) {
+        days.push('SATURDAY');
+        marked = marked.replace(/SA/g, '##');
+    }
+    
+    // Now check single-letter days
+    if (marked.includes('M')) days.push('MONDAY');
+    if (marked.includes('T')) days.push('TUESDAY');
+    if (marked.includes('W')) days.push('WEDNESDAY');
+    if (marked.includes('F')) days.push('FRIDAY');
+    
+    return [...new Set(days)]; // Remove duplicates
+}
+
 // Conflict Detection: Check if a schedule conflicts with faculty's assigned schedules
 function hasConflict(scheduleId, dayPattern, startTime, endTime) {
     if (!currentFacultyId || !facultyData[currentFacultyId]) return false;
     
     const faculty = facultyData[currentFacultyId];
-    const scheduleDays = dayPattern.split('');
+    const scheduleDays = parseDayPattern(dayPattern);
     
     for (const assigned of faculty.assignedSchedules) {
         // Skip comparing with itself
         if (assigned.id === scheduleId) continue;
         
-        const assignedDays = assigned.dayPatternRaw.split('');
+        const assignedDays = parseDayPattern(assigned.dayPatternRaw);
         
         // Check if days overlap
         const daysOverlap = scheduleDays.some(day => assignedDays.includes(day));
@@ -1221,8 +1263,8 @@ function detectLoadedConflicts() {
             const s1 = faculty.assignedSchedules[i];
             const s2 = faculty.assignedSchedules[j];
             
-            const days1 = s1.dayPatternRaw.split('');
-            const days2 = s2.dayPatternRaw.split('');
+            const days1 = parseDayPattern(s1.dayPatternRaw);
+            const days2 = parseDayPattern(s2.dayPatternRaw);
             const daysOverlap = days1.some(day => days2.includes(day));
             
             if (daysOverlap && timesOverlap(s1.startTimeRaw, s1.endTimeRaw, s2.startTimeRaw, s2.endTimeRaw)) {

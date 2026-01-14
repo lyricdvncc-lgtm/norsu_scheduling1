@@ -1365,6 +1365,11 @@ class AdminController extends AbstractController
         // Use system-wide active semester as the default filter
         $semesterFilter = $this->systemSettingsService->getActiveSemester();
         
+        // Clear semester filter if redirected from create
+        if ($request->query->get('clear_semester') === '1') {
+            $semesterFilter = null;
+        }
+        
         // Default to showing ALL subjects, not just published ones
         $publishedOnlyParam = $request->query->get('published_only');
         $publishedOnly = $publishedOnlyParam === 'published' ? '1' : ($publishedOnlyParam === 'all' ? '0' : '0');
@@ -1407,7 +1412,8 @@ class AdminController extends AbstractController
             try {
                 $subjectService->createSubject($subject);
                 $this->addFlash('success', 'Subject created successfully.');
-                return $this->redirectToRoute('admin_subjects');
+                // Redirect with semester filter cleared so the new subject shows up
+                return $this->redirectToRoute('admin_subjects', ['clear_semester' => '1']);
             } catch (\Exception $e) {
                 $this->addFlash('error', 'Error creating subject: ' . $e->getMessage());
             }

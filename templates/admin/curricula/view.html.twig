@@ -576,7 +576,7 @@
     {{ parent() }}
     
     <script>
-        let selectedFile = null;
+        let selectedViewFile = null;
 
         function openUploadModal() {
             document.getElementById('uploadModal').classList.remove('hidden');
@@ -613,7 +613,7 @@
                 return;
             }
 
-            selectedFile = file;
+            selectedViewFile = file;
             
             // Show file info
             document.getElementById('fileName').textContent = file.name;
@@ -624,7 +624,7 @@
 
         function clearFile(event) {
             if (event) event.stopPropagation();
-            selectedFile = null;
+            selectedViewFile = null;
             document.getElementById('fileInput').value = '';
             document.getElementById('fileInfo').classList.add('hidden');
             document.getElementById('uploadButton').disabled = true;
@@ -641,13 +641,13 @@
         }
 
         function uploadCurriculum() {
-            if (!selectedFile) {
+            if (!selectedViewFile) {
                 alert('Please select a file to upload.');
                 return;
             }
 
             const formData = new FormData();
-            formData.append('curriculum_file', selectedFile);
+            formData.append('curriculum_file', selectedViewFile);
             formData.append('curriculum_id', '{{ curriculum.id }}');
             formData.append('validate_only', document.getElementById('validateOnly').checked ? '1' : '0');
             formData.append('auto_create_terms', document.getElementById('autoCreateTerms').checked ? '1' : '0');
@@ -683,7 +683,8 @@
                               `Terms created: ${data.terms_created || 0}\n` +
                               `${data.message || ''}`);
                         closeUploadModal();
-                        location.reload();
+                        // Redirect to Manage Subjects page after upload
+                        window.location.href = '{{ path('admin_curriculum_subjects', {id: curriculum.id}) }}';
                     }, 500);
                 } else {
                     document.getElementById('uploadProgress').classList.add('hidden');

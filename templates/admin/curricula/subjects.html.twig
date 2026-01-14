@@ -739,6 +739,16 @@
 {% block javascripts %}
     {{ parent() }}
     
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+    
     <script>
         let currentTermId = null;
         let availableSubjects = [];
@@ -1019,19 +1029,60 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    let message = `Successfully added ${data.added_count} subject(s)!`;
+                    // Show success message without blocking
+                    const successMsg = document.createElement('div');
+                    successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 animate-fade-in';
+                    successMsg.innerHTML = `
+                        <div class="flex items-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Successfully added ${data.added_count} subject(s)!</span>
+                        </div>
+                    `;
+                    document.body.appendChild(successMsg);
+                    setTimeout(() => successMsg.remove(), 3000);
+                    
+                    // Show warnings if any
                     if (data.errors && data.errors.length > 0) {
-                        message += `\n\nWarnings/Errors:\n${data.errors.join('\n')}`;
+                        const warningMsg = document.createElement('div');
+                        warningMsg.className = 'fixed top-20 right-4 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 animate-fade-in max-w-md';
+                        warningMsg.innerHTML = `
+                            <div class="font-semibold mb-2">Warnings:</div>
+                            <ul class="text-sm list-disc list-inside">
+                                ${data.errors.map(err => `<li>${err}</li>`).join('')}
+                            </ul>
+                        `;
+                        document.body.appendChild(warningMsg);
+                        setTimeout(() => warningMsg.remove(), 5000);
                     }
-                    alert(message);
+                    
                     closeAddSubjectModal();
-                    location.reload();
+                    // Explicitly redirect to Manage Subjects page to ensure we stay here
+                    setTimeout(() => {
+                        window.location.href = '{{ path('admin_curriculum_subjects', {id: curriculum.id}) }}';
+                    }, 1500);
                 } else {
-                    let errorMessage = 'Error: ' + data.message;
-                    if (data.errors && data.errors.length > 0) {
-                        errorMessage += '\n\nDetails:\n' + data.errors.join('\n');
-                    }
-                    alert(errorMessage);
+                    // Show error message
+                    const errorMsg = document.createElement('div');
+                    errorMsg.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-4 rounded-lg shadow-lg z-50 max-w-md';
+                    errorMsg.innerHTML = `
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <div>
+                                <div class="font-semibold mb-1">Error: ${data.message}</div>
+                                ${data.errors && data.errors.length > 0 ? `
+                                    <ul class="text-sm list-disc list-inside mt-2">
+                                        ${data.errors.map(err => `<li>${err}</li>`).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(errorMsg);
+                    setTimeout(() => errorMsg.remove(), 5000);
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -1040,7 +1091,7 @@
         }
 
         // Upload Curriculum Modal Functions
-        let selectedFile = null;
+        let selectedCurriculumFile = null;
 
         function openUploadCurriculumModal() {
             document.getElementById('uploadCurriculumModal').classList.remove('hidden');
@@ -1077,7 +1128,7 @@
                 return;
             }
 
-            selectedFile = file;
+            selectedCurriculumFile = file;
             
             // Show file info
             document.getElementById('fileName').textContent = file.name;
@@ -1087,7 +1138,7 @@
         }
 
         function clearFile() {
-            selectedFile = null;
+            selectedCurriculumFile = null;
             document.getElementById('curriculumFile').value = '';
             document.getElementById('fileInfo').classList.add('hidden');
             document.getElementById('uploadButton').disabled = true;
@@ -1104,13 +1155,13 @@
         }
 
         function uploadCurriculum() {
-            if (!selectedFile) {
+            if (!selectedCurriculumFile) {
                 alert('Please select a file to upload.');
                 return;
             }
 
             const formData = new FormData();
-            formData.append('curriculum_file', selectedFile);
+            formData.append('curriculum_file', selectedCurriculumFile);
             formData.append('curriculum_id', '{{ curriculum.id }}');
             formData.append('validate_only', document.getElementById('validateOnly').checked ? '1' : '0');
             formData.append('auto_create_terms', document.getElementById('autoCreateTerms').checked ? '1' : '0');

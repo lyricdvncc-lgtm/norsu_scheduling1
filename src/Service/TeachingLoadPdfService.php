@@ -84,6 +84,7 @@ class TeachingLoadPdfService
     {
         $totalUnits = 0;
         $totalHours = 0;
+        $totalContactHours = 0;
         $totalStudents = 0;
         $semesterFromSchedules = null;
         $semesters = [];
@@ -99,6 +100,18 @@ class TeachingLoadPdfService
             // Multiply by number of days in the pattern
             $daysPerWeek = count($schedule->getDaysFromPattern());
             $totalHours += ($hours * $daysPerWeek);
+            
+            // Calculate contact hours per week
+            // For Saturday-only or Sunday-only classes, contact hours = 5
+            // For other patterns, contact hours = units
+            $dayPattern = $schedule->getDayPattern();
+            $normalizedPattern = strtoupper(trim($dayPattern));
+            if ($normalizedPattern === 'SAT' || $normalizedPattern === 'SATURDAY' || 
+                $normalizedPattern === 'SUN' || $normalizedPattern === 'SUNDAY') {
+                $totalContactHours += 5;
+            } else {
+                $totalContactHours += $schedule->getSubject()->getUnits();
+            }
             
             $totalStudents += $schedule->getEnrolledStudents();
             
@@ -127,6 +140,7 @@ class TeachingLoadPdfService
         return [
             'totalUnits' => $totalUnits,
             'totalHours' => $totalHours,
+            'totalContactHours' => $totalContactHours,
             'totalStudents' => $totalStudents,
             'semester' => $semesterFromSchedules
         ];
@@ -292,7 +306,21 @@ class TeachingLoadPdfService
                 $subjectWithSection = $courseCode . ' ' . $schedule->getSection() . ' - ' . $courseTitle;
                 $roomName = $schedule->getRoom()->getCode();
                 $units = (string)$schedule->getSubject()->getUnits();
-                $students = (string)$schedule->getEnrolledStudents();
+                
+                // Determine max capacity based on lab hours
+                // If subject has lab hours > 0, show 35, otherwise show 40
+                $maxCapacity = ($schedule->getSubject()->getLabHours() > 0) ? 35 : 40;
+                $students = (string)$maxCapacity;
+                
+                // Calculate contact hours per week based on day pattern
+                // For Saturday-only or Sunday-only classes, contact hours = 5
+                // For other patterns, contact hours = units
+                $contactHours = $units;
+                $normalizedPattern = strtoupper(trim($dayPattern));
+                if ($normalizedPattern === 'SAT' || $normalizedPattern === 'SATURDAY' || 
+                    $normalizedPattern === 'SUN' || $normalizedPattern === 'SUNDAY') {
+                    $contactHours = '5';
+                }
                 
                 // Calculate required height based on all cells
                 $maxLines = max(
@@ -318,7 +346,7 @@ class TeachingLoadPdfService
                 $x += $colWidths[3];
                 $pdf->MultiCell($colWidths[4], $rowHeight, $units, 1, 'C', false, 0, $x, $rowY, true, 0, false, true, $rowHeight, 'M');
                 $x += $colWidths[4];
-                $pdf->MultiCell($colWidths[5], $rowHeight, $units, 1, 'C', false, 0, $x, $rowY, true, 0, false, true, $rowHeight, 'M');
+                $pdf->MultiCell($colWidths[5], $rowHeight, $contactHours, 1, 'C', false, 0, $x, $rowY, true, 0, false, true, $rowHeight, 'M');
                 $x += $colWidths[5];
                 $pdf->MultiCell($colWidths[6], $rowHeight, $roomName, 1, 'C', false, 0, $x, $rowY, true, 0, false, true, $rowHeight, 'M');
                 
@@ -347,8 +375,8 @@ class TeachingLoadPdfService
             // Total units
             $pdf->MultiCell($colWidths[4], $totalHeight, (string)$totals['totalUnits'], 1, 'C', true, 0, $x, $totalY, true, 0, false, true, $totalHeight, 'M');
             $x += $colWidths[4];
-            // Total contact hours (same as units)
-            $pdf->MultiCell($colWidths[5], $totalHeight, (string)$totals['totalUnits'], 1, 'C', true, 0, $x, $totalY, true, 0, false, true, $totalHeight, 'M');
+            // Total contact hours (calculated based on day patterns)
+            $pdf->MultiCell($colWidths[5], $totalHeight, (string)$totals['totalContactHours'], 1, 'C', true, 0, $x, $totalY, true, 0, false, true, $totalHeight, 'M');
             $x += $colWidths[5];
             // Empty cell for Room
             $pdf->MultiCell($colWidths[6], $totalHeight, '', 1, 'C', true, 0, $x, $totalY, true, 0, false, true, $totalHeight, 'M');
@@ -412,7 +440,7 @@ class TeachingLoadPdfService
         $pdf->Cell($leftColWidth + $rightColWidth, $rowHeight, 'No. of Preparation: ' . $numberOfPreparations, 0, 1, 'L');
         
         // Row 2: Total Hours (left) and Total Students (positioned to the right)
-        $pdf->Cell($leftColWidth, $rowHeight, 'Total No. of Hrs./Week.: ' . number_format($totals['totalHours'], 0), 0, 0, 'L');
+        $pdf->Cell($leftColWidth, $rowHeight, 'Total No. of Hrs./Week.: ' . number_format($totals['totalContactHours'], 0), 0, 0, 'L');
         $pdf->Cell(10, $rowHeight, '', 0, 0, 'L'); // Spacing between the two fields
         $pdf->Cell($rightColWidth - 10, $rowHeight, 'Total No. of Students: ' . $totals['totalStudents'], 0, 1, 'L');
         

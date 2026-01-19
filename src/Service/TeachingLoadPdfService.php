@@ -113,7 +113,10 @@ class TeachingLoadPdfService
                 $totalContactHours += $schedule->getSubject()->getUnits();
             }
             
-            $totalStudents += $schedule->getEnrolledStudents();
+            // Calculate max capacity for this schedule
+            // If subject has lab hours > 0, max capacity is 35, otherwise 40
+            $maxCapacity = ($schedule->getSubject()->getLabHours() > 0) ? 35 : 40;
+            $totalStudents += $maxCapacity;
             
             // Collect all unique semesters
             $scheduleSemester = $schedule->getSemester();

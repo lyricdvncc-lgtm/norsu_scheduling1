@@ -476,7 +476,7 @@ let allRoomSchedules = {};
 // Rooms data for dropdowns
 const roomsData = [
     {% for room in rooms %}
-    {id: {{ room.id }}, code: '{{ room.code }}', name: '{{ room.name|default('') }}', capacity: {{ room.capacity }}},
+    {id: {{ room.id }}, code: '{{ room.code }}', name: '{{ room.name|default('') }}', capacity: {{ room.capacity }}}{{ loop.last ? '' : ',' }}
     {% endfor %}
 ];
 

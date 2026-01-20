@@ -13,6 +13,12 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: 'users')]
+#[ORM\Index(name: 'idx_email', columns: ['email'])]
+#[ORM\Index(name: 'idx_username', columns: ['username'])]
+#[ORM\Index(name: 'idx_employee_id', columns: ['employee_id'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_email', columns: ['email'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_username', columns: ['username'])]
+#[ORM\UniqueConstraint(name: 'UNIQ_employee_id', columns: ['employee_id'])]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 #[UniqueEntity(fields: ['username'], message: 'There is already an account with this username')]
 #[UniqueEntity(fields: ['employeeId'], message: 'This Employee ID is already in use')]

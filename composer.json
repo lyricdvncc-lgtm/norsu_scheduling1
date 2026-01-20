@@ -100,8 +100,10 @@
         }
     },
     "config": {
-        "platform": {
-            "ext-gd": "8.2"
+        "platform-check": false,
+        "allow-plugins": {
+            "symfony/flex": true,
+            "symfony/runtime": true
         }
     },
     "require-dev": {

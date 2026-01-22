@@ -48,26 +48,38 @@ class RoomsReportPdfService
 
     private function generateHeader(TCPDF $pdf, ?string $year, ?string $semester, ?string $departmentName, ?string $searchTerm): void
     {
+        // Reset any previous formatting
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFillColor(255, 255, 255);
+        
+        // Ensure we're at the top of the page
+        $pdf->SetY(10);
+        
         // School header
         $pdf->SetFont('helvetica', 'B', 16);
-        $pdf->Cell(0, 8, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
+        $pdf->Cell(0, 10, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
         
-        $pdf->SetFont('helvetica', '', 11);
+        // Add spacing before subtitle
+        $pdf->Ln(1);
+        
+        $pdf->SetFont('helvetica', '', 10);
         $pdf->Cell(0, 6, 'Smart Scheduling System', 0, 1, 'C');
         
+        // Add more spacing before report title
         $pdf->Ln(3);
         
         // Report title
         $pdf->SetFont('helvetica', 'B', 14);
         $pdf->Cell(0, 8, 'ROOM USAGE HISTORY REPORT', 0, 1, 'C');
         
-        $pdf->Ln(2);
+        // Add spacing after title
+        $pdf->Ln(4);
         
         // Filter information
-        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetFont('helvetica', '', 9);
         
         if ($departmentName) {
-            $pdf->Cell(0, 6, 'Department: ' . $departmentName, 0, 1, 'C');
+            $pdf->Cell(0, 5, 'Department: ' . $departmentName, 0, 1, 'C');
         }
         
         if ($year || $semester) {
@@ -75,17 +87,17 @@ class RoomsReportPdfService
             if ($year) $filterText .= $year;
             if ($year && $semester) $filterText .= ' | ';
             if ($semester) $filterText .= $semester . ' Semester';
-            $pdf->Cell(0, 6, $filterText, 0, 1, 'C');
+            $pdf->Cell(0, 5, $filterText, 0, 1, 'C');
         }
         
         if ($searchTerm) {
-            $pdf->Cell(0, 6, 'Search Term: "' . $searchTerm . '"', 0, 1, 'C');
+            $pdf->Cell(0, 5, 'Search Term: "' . $searchTerm . '"', 0, 1, 'C');
         }
         
-        $pdf->SetFont('helvetica', 'I', 9);
+        $pdf->SetFont('helvetica', 'I', 8);
         $pdf->Cell(0, 5, 'Generated on: ' . date('F d, Y h:i A'), 0, 1, 'C');
         
-        $pdf->Ln(5);
+        $pdf->Ln(6);
     }
 
     private function generateSummary(TCPDF $pdf, array $roomsData): void
@@ -137,7 +149,7 @@ class RoomsReportPdfService
         $pdf->SetFillColor(240, 240, 240);
         
         $pdf->Cell(12, 8, 'No.', 1, 0, 'C', true);
-        $pdf->Cell(45, 8, 'Room Name', 1, 0, 'L', true);
+        $pdf->Cell(45, 8, 'Room Code', 1, 0, 'L', true);
         $pdf->Cell(45, 8, 'Building', 1, 0, 'L', true);
         $pdf->Cell(23, 8, 'Capacity', 1, 0, 'C', true);
         $pdf->Cell(25, 8, 'Schedules', 1, 0, 'C', true);
@@ -161,7 +173,7 @@ class RoomsReportPdfService
                 $pdf->SetFillColor(240, 240, 240);
                 
                 $pdf->Cell(12, 8, 'No.', 1, 0, 'C', true);
-                $pdf->Cell(45, 8, 'Room Name', 1, 0, 'L', true);
+                $pdf->Cell(45, 8, 'Room Code', 1, 0, 'L', true);
                 $pdf->Cell(45, 8, 'Building', 1, 0, 'L', true);
                 $pdf->Cell(23, 8, 'Capacity', 1, 0, 'C', true);
                 $pdf->Cell(25, 8, 'Schedules', 1, 0, 'C', true);
@@ -177,34 +189,44 @@ class RoomsReportPdfService
                 $pdf->SetFillColor(255, 255, 255);
             }
             
-            // Get starting Y position and X position
-            $startY = $pdf->GetY();
-            $startX = $pdf->GetX();
+            // Get current position
+            $currentX = $pdf->GetX();
+            $currentY = $pdf->GetY();
             
             // Calculate row height based on longest content
             $pdf->SetFont('helvetica', '', 8);
-            $roomNameHeight = $pdf->getStringHeight(45, $room->getName());
+            $roomCodeHeight = $pdf->getStringHeight(45, $room->getCode());
             $buildingHeight = $pdf->getStringHeight(45, $room->getBuilding() ?? '');
             $departmentsHeight = $pdf->getStringHeight(45, $departments);
-            $maxHeight = max($roomNameHeight, $buildingHeight, $departmentsHeight, 7);
+            $maxHeight = max($roomCodeHeight, $buildingHeight, $departmentsHeight, 8);
             
-            // Draw cells with same height
+            // Draw all cells in proper sequence with explicit coordinates
+            // Column 1: Number
+            $pdf->SetXY($currentX, $currentY);
             $pdf->Cell(12, $maxHeight, $count, 1, 0, 'C', true);
             
-            // Room Name with wrapping
-            $pdf->MultiCell(45, $maxHeight, $room->getName(), 1, 'L', true, 0, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 2: Room Code
+            $pdf->SetXY($currentX + 12, $currentY);
+            $pdf->MultiCell(45, $maxHeight, $room->getCode(), 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
             
-            // Building with wrapping
-            $pdf->MultiCell(45, $maxHeight, $room->getBuilding() ?? '', 1, 'L', true, 0, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 3: Building
+            $pdf->SetXY($currentX + 57, $currentY);
+            $pdf->MultiCell(45, $maxHeight, $room->getBuilding() ?? '', 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
             
-            // Capacity (single line)
+            // Column 4: Capacity
+            $pdf->SetXY($currentX + 102, $currentY);
             $pdf->Cell(23, $maxHeight, $room->getCapacity(), 1, 0, 'C', true);
             
-            // Schedule Count (single line)
+            // Column 5: Schedule Count
+            $pdf->SetXY($currentX + 125, $currentY);
             $pdf->Cell(25, $maxHeight, $scheduleCount, 1, 0, 'C', true);
             
-            // Departments with wrapping
-            $pdf->MultiCell(45, $maxHeight, $departments, 1, 'L', true, 1, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 6: Departments
+            $pdf->SetXY($currentX + 150, $currentY);
+            $pdf->MultiCell(45, $maxHeight, $departments, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            
+            // Move to next row
+            $pdf->SetXY($currentX, $currentY + $maxHeight);
             
             $count++;
         }
@@ -212,12 +234,12 @@ class RoomsReportPdfService
 
     private function generateFooter(TCPDF $pdf): void
     {
-        $pdf->Ln(10);
+        $pdf->Ln(8);
         
         $pdf->SetFont('helvetica', 'I', 8);
         $pdf->SetTextColor(128, 128, 128);
         
-        $pdf->Cell(0, 5, 'This report was automatically generated by the Smart Scheduling System', 0, 1, 'C');
-        $pdf->Cell(0, 5, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
+        $footerText = 'This report was automatically generated by the Smart Scheduling System - NEGROS ORIENTAL STATE UNIVERSITY';
+        $pdf->Cell(0, 5, $footerText, 0, 1, 'C');
     }
 }

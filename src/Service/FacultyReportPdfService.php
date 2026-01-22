@@ -29,12 +29,18 @@ class FacultyReportPdfService
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
 
+        // Disable image scale
+        $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+        
         // Set margins
         $pdf->SetMargins(10, 10, 10);
         $pdf->SetAutoPageBreak(TRUE, 10);
 
         // Add a page
         $pdf->AddPage();
+        
+        // Reset Y position to ensure we start at the top
+        $pdf->SetY(10);
 
         // Generate the PDF content
         $this->generateHeader($pdf, $year, $semester, $departmentName, $searchTerm);
@@ -48,26 +54,38 @@ class FacultyReportPdfService
 
     private function generateHeader(TCPDF $pdf, ?string $year, ?string $semester, ?string $departmentName, ?string $searchTerm): void
     {
+        // Reset any previous formatting
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFillColor(255, 255, 255);
+        
+        // Ensure we're at the top of the page
+        $pdf->SetY(10);
+        
         // School header
         $pdf->SetFont('helvetica', 'B', 16);
-        $pdf->Cell(0, 8, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
+        $pdf->Cell(0, 10, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
         
-        $pdf->SetFont('helvetica', '', 11);
+        // Add spacing before subtitle
+        $pdf->Ln(1);
+        
+        $pdf->SetFont('helvetica', '', 10);
         $pdf->Cell(0, 6, 'Smart Scheduling System', 0, 1, 'C');
         
+        // Add more spacing before report title
         $pdf->Ln(3);
         
         // Report title
         $pdf->SetFont('helvetica', 'B', 14);
         $pdf->Cell(0, 8, 'FACULTY TEACHING HISTORY REPORT', 0, 1, 'C');
         
-        $pdf->Ln(2);
+        // Add spacing after title
+        $pdf->Ln(4);
         
         // Filter information
-        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetFont('helvetica', '', 9);
         
         if ($departmentName) {
-            $pdf->Cell(0, 6, 'Department: ' . $departmentName, 0, 1, 'C');
+            $pdf->Cell(0, 5, 'Department: ' . $departmentName, 0, 1, 'C');
         }
         
         if ($year || $semester) {
@@ -75,17 +93,17 @@ class FacultyReportPdfService
             if ($year) $filterText .= $year;
             if ($year && $semester) $filterText .= ' | ';
             if ($semester) $filterText .= $semester . ' Semester';
-            $pdf->Cell(0, 6, $filterText, 0, 1, 'C');
+            $pdf->Cell(0, 5, $filterText, 0, 1, 'C');
         }
         
         if ($searchTerm) {
-            $pdf->Cell(0, 6, 'Search Term: "' . $searchTerm . '"', 0, 1, 'C');
+            $pdf->Cell(0, 5, 'Search Term: "' . $searchTerm . '"', 0, 1, 'C');
         }
         
-        $pdf->SetFont('helvetica', 'I', 9);
+        $pdf->SetFont('helvetica', 'I', 8);
         $pdf->Cell(0, 5, 'Generated on: ' . date('F d, Y h:i A'), 0, 1, 'C');
         
-        $pdf->Ln(5);
+        $pdf->Ln(6);
     }
 
     private function generateSummary(TCPDF $pdf, array $facultyData): void
@@ -184,32 +202,48 @@ class FacultyReportPdfService
                 $pdf->SetFillColor(255, 255, 255);
             }
             
-            // Get starting Y position
-            $startY = $pdf->GetY();
+            // Get current position
+            $currentX = $pdf->GetX();
+            $currentY = $pdf->GetY();
             
             // Calculate row height based on longest content
             $pdf->SetFont('helvetica', '', 8);
             $nameHeight = $pdf->getStringHeight(50, $fullName);
             $positionHeight = $pdf->getStringHeight(40, $position ?? '');
             $departmentHeight = $pdf->getStringHeight(40, $department);
-            $maxHeight = max($nameHeight, $positionHeight, $departmentHeight, 7);
+            $maxHeight = max($nameHeight, $positionHeight, $departmentHeight, 8);
             
-            // Draw cells with same height
+            // Draw all cells in proper sequence with explicit coordinates
+            // Column 1: Number
+            $pdf->SetXY($currentX, $currentY);
             $pdf->Cell(12, $maxHeight, $count, 1, 0, 'C', true);
-            $pdf->Cell(30, $maxHeight, $faculty->getEmployeeId() ?? '', 1, 0, 'C', true);
             
-            // Faculty Name with wrapping
-            $pdf->MultiCell(50, $maxHeight, $fullName, 1, 'L', true, 0, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 2: Employee ID
+            $pdf->SetXY($currentX + 12, $currentY);
+            $pdf->Cell(30, $maxHeight, $faculty->getEmployeeId() ?? '', 1, 0, 'L', true);
             
-            // Position with wrapping
-            $pdf->MultiCell(40, $maxHeight, $position ?? '', 1, 'L', true, 0, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 3: Faculty Name
+            $pdf->SetXY($currentX + 42, $currentY);
+            $pdf->MultiCell(50, $maxHeight, $fullName, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
             
-            // Department with wrapping
-            $pdf->MultiCell(40, $maxHeight, $department, 1, 'L', true, 0, 0, 0, true, 0, false, true, $maxHeight, 'M');
+            // Column 4: Position
+            $pdf->SetXY($currentX + 92, $currentY);
+            $pdf->MultiCell(40, $maxHeight, $position ?? '', 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
             
-            // Units and Subjects (single line)
+            // Column 5: Department
+            $pdf->SetXY($currentX + 132, $currentY);
+            $pdf->MultiCell(40, $maxHeight, $department, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            
+            // Column 6: Units
+            $pdf->SetXY($currentX + 172, $currentY);
             $pdf->Cell(13, $maxHeight, $totalUnits, 1, 0, 'C', true);
-            $pdf->Cell(10, $maxHeight, $scheduleCount, 1, 1, 'C', true);
+            
+            // Column 7: Subjects
+            $pdf->SetXY($currentX + 185, $currentY);
+            $pdf->Cell(10, $maxHeight, $scheduleCount, 1, 0, 'C', true);
+            
+            // Move to next row
+            $pdf->SetXY($currentX, $currentY + $maxHeight);
             
             $count++;
         }
@@ -217,12 +251,12 @@ class FacultyReportPdfService
 
     private function generateFooter(TCPDF $pdf): void
     {
-        $pdf->Ln(10);
+        $pdf->Ln(8);
         
         $pdf->SetFont('helvetica', 'I', 8);
         $pdf->SetTextColor(128, 128, 128);
         
-        $pdf->Cell(0, 5, 'This report was automatically generated by the Smart Scheduling System', 0, 1, 'C');
-        $pdf->Cell(0, 5, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
+        $footerText = 'This report was automatically generated by the Smart Scheduling System - NEGROS ORIENTAL STATE UNIVERSITY';
+        $pdf->Cell(0, 5, $footerText, 0, 1, 'C');
     }
 }

@@ -1515,7 +1515,7 @@ const departmentGroupMap = {
     {% for deptId, groupDepts in departmentGroupMap %}
     "{{ deptId }}": [
         {% for groupDept in groupDepts %}
-        { id: {{ groupDept.id }}, name: '{{ groupDept.name|e('js') }}' }{{ not loop.last ? ',' : '' }}
+        { id: {{ groupDept.id }}, name: '{{ groupDept.name|e('js') }}' }{% if not loop.last %},{% endif %}
         {% endfor %}
     ]{% if not loop.last %},{% endif %}
     {% endfor %}
@@ -1546,7 +1546,7 @@ function roomsTableData() {
                     departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
                     years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
                     semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
-                },
+                }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
             
@@ -1738,7 +1738,7 @@ function facultyTableData() {
                     departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
                     years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
                     semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
-                },
+                }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
             
@@ -1936,7 +1936,7 @@ function subjectsTableData() {
                     schedules: {{ item.schedules|default([])|json_encode|raw }},
                     years: {{ item.yearsList|default([])|json_encode|raw }},
                     semesters: {{ item.semestersList|default([])|json_encode|raw }}
-                },
+                }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ];
             

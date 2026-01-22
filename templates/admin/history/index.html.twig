@@ -1511,7 +1511,7 @@ document.getElementById('filterSearch').addEventListener('keyup', function() {
 let subjectsAlpineComponent = null;
 
 // Department Group Mapping - for filtering by department group
-const departmentGroupMap = {
+const departmentGroupMap = {% if departmentGroupMap is empty %}{}{% else %}{
     {% for deptId, groupDepts in departmentGroupMap %}
     "{{ deptId }}": [
         {% for groupDept in groupDepts %}
@@ -1519,7 +1519,7 @@ const departmentGroupMap = {
         {% endfor %}
     ]{% if not loop.last %},{% endif %}
     {% endfor %}
-};
+}{% endif %};
 
 function roomsTableData() {
     return {
@@ -1534,7 +1534,7 @@ function roomsTableData() {
         
         init() {
             // Load rooms data from server
-            this.rooms = [
+            this.rooms = {% if roomsData is empty %}[]{% else %}[
                 {% for item in roomsData %}
                 {% set room = item[0] %}
                 {
@@ -1548,7 +1548,7 @@ function roomsTableData() {
                     semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
-            ];
+            ]{% endif %};
             
             // Listen to global filter changes
             const self = this;
@@ -1720,7 +1720,7 @@ function facultyTableData() {
         
         init() {
             // Load faculty data from server
-            this.faculty = [
+            this.faculty = {% if facultyData is empty %}[]{% else %}[
                 {% for item in facultyData %}
                 {% set faculty = item[0] %}
                 {
@@ -1740,7 +1740,7 @@ function facultyTableData() {
                     semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
-            ];
+            ]{% endif %};
             
             // Listen to global filter changes
             const self = this;
@@ -1922,7 +1922,7 @@ function subjectsTableData() {
             subjectsAlpineComponent = this;
             
             // Load data from server
-            this.allData = [
+            this.allData = {% if subjectsData is empty %}[]{% else %}[
                 {% for item in subjectsData %}
                 {% set subject = item[0] %}
                 {
@@ -1938,7 +1938,7 @@ function subjectsTableData() {
                     semesters: {{ item.semestersList|default([])|json_encode|raw }}
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
-            ];
+            ]{% endif %};
             
             // Listen to global filter changes
             const self = this;

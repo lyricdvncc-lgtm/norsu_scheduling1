@@ -147,9 +147,16 @@ class FacultyReportPdfService
             $scheduleCount = $item['scheduleCount'];
             $totalUnits = $item['totalUnits'] ?? 0;
             
-            $fullName = $faculty->getFirstName() . ' ' . $faculty->getLastName();
+            // Build full name with middle name/initial
+            $nameParts = [$faculty->getFirstName()];
+            if ($faculty->getMiddleName()) {
+                $nameParts[] = $faculty->getMiddleName();
+            }
+            $nameParts[] = $faculty->getLastName();
+            $fullName = implode(' ', $nameParts);
+            
             $department = $faculty->getDepartment() ? $faculty->getDepartment()->getName() : 'No Department';
-            $position = $faculty->getPosition();
+            $position = $faculty->getPosition() ?? 'N/A';
             
             // Auto page break check
             if ($pdf->GetY() > 290) {

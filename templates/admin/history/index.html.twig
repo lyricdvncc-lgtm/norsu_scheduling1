@@ -1513,9 +1513,9 @@ let subjectsAlpineComponent = null;
 // Department Group Mapping - for filtering by department group
 const departmentGroupMap = {% if departmentGroupMap is empty %}{}{% else %}{
     {% for deptId, groupDepts in departmentGroupMap %}
-    "{{ deptId }}": [
+    "{{ deptId ?? 0 }}": [
         {% for groupDept in groupDepts %}
-        { id: {{ groupDept.id }}, name: '{{ groupDept.name|e('js') }}' }{% if not loop.last %},{% endif %}
+        { id: {{ groupDept.id ?? 0 }}, name: '{{ groupDept.name|default('')|e('js') }}' }{% if not loop.last %},{% endif %}
         {% endfor %}
     ]{% if not loop.last %},{% endif %}
     {% endfor %}
@@ -1538,11 +1538,11 @@ function roomsTableData() {
                 {% for item in roomsData %}
                 {% set room = item[0] %}
                 {
-                    id: {{ room.id }},
-                    name: '{{ room.name|e('js') }}',
-                    building: '{{ room.building|e('js') }}',
-                    capacity: {{ room.capacity }},
-                    scheduleCount: {{ item.scheduleCount }},
+                    id: {{ room.id ?? 0 }},
+                    name: '{{ room.name|default('')|e('js') }}',
+                    building: '{{ room.building|default('')|e('js') }}',
+                    capacity: {{ room.capacity ?? 0 }},
+                    scheduleCount: {{ item.scheduleCount ?? 0 }},
                     departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
                     years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
                     semesters: '{{ item.semesters|default('')|e('js') }}'.split(',').filter(s => s.trim())
@@ -1724,16 +1724,16 @@ function facultyTableData() {
                 {% for item in facultyData %}
                 {% set faculty = item[0] %}
                 {
-                    id: {{ faculty.id }},
-                    firstName: '{{ faculty.firstName|e('js') }}',
-                    lastName: '{{ faculty.lastName|e('js') }}',
-                    fullName: '{{ faculty.firstName|e('js') }} {{ faculty.lastName|e('js') }}',
-                    initials: '{{ faculty.firstName|first }}{{ faculty.lastName|first }}',
-                    employeeId: '{{ faculty.employeeId|e('js') }}',
-                    position: '{{ faculty.position|e('js') }}',
-                    departmentName: '{{ faculty.department ? faculty.department.name|e('js') : '' }}',
-                    departmentId: '{{ faculty.department ? faculty.department.id : '' }}',
-                    scheduleCount: {{ item.scheduleCount }},
+                    id: {{ faculty.id ?? 0 }},
+                    firstName: '{{ faculty.firstName|default('')|e('js') }}',
+                    lastName: '{{ faculty.lastName|default('')|e('js') }}',
+                    fullName: '{{ faculty.firstName|default('')|e('js') }} {{ faculty.lastName|default('')|e('js') }}',
+                    initials: '{{ faculty.firstName|default('?')|first }}{{ faculty.lastName|default('?')|first }}',
+                    employeeId: '{{ faculty.employeeId|default('')|e('js') }}',
+                    position: '{{ faculty.position|default('')|e('js') }}',
+                    departmentName: '{{ faculty.department ? faculty.department.name|default('')|e('js') : '' }}',
+                    departmentId: '{{ faculty.department ? faculty.department.id : 0 }}',
+                    scheduleCount: {{ item.scheduleCount ?? 0 }},
                     totalUnits: {{ item.totalUnits ?? 0 }},
                     departments: '{{ item.departments|default('')|e('js') }}'.split(',').filter(d => d.trim()),
                     years: '{{ item.years|default('')|e('js') }}'.split(',').filter(y => y.trim()),
@@ -1926,13 +1926,13 @@ function subjectsTableData() {
                 {% for item in subjectsData %}
                 {% set subject = item[0] %}
                 {
-                    id: {{ subject.id }},
-                    code: '{{ subject.code|e('js') }}',
-                    title: '{{ subject.title|e('js') }}',
-                    department: '{{ subject.department ? subject.department.name|e('js') : '' }}',
-                    departmentId: '{{ item.departmentId|default('') }}',
-                    units: {{ subject.units }},
-                    type: '{{ subject.type|e('js') }}',
+                    id: {{ subject.id ?? 0 }},
+                    code: '{{ subject.code|default('')|e('js') }}',
+                    title: '{{ subject.title|default('')|e('js') }}',
+                    department: '{{ subject.department ? subject.department.name|default('')|e('js') : '' }}',
+                    departmentId: '{{ item.departmentId|default(0) }}',
+                    units: {{ subject.units ?? 0 }},
+                    type: '{{ subject.type|default('lecture')|e('js') }}',
                     schedules: {{ item.schedules|default([])|json_encode|raw }},
                     years: {{ item.yearsList|default([])|json_encode|raw }},
                     semesters: {{ item.semestersList|default([])|json_encode|raw }}

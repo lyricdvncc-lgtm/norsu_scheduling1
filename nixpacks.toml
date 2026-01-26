@@ -1,9 +1,5 @@
-# Railway deployment configuration
 [phases.setup]
-cmds = ["install-php-extensions gd zip exif intl"]
+nixPkgs = ["php85Extensions.zip"]
 
 [phases.install]
-cmds = ["composer install --optimize-autoloader --no-scripts --no-interaction"]
-
-[start]
-cmd = "frankenphp php-server --listen 0.0.0.0:$PORT"
+cmds = ["install-php-extensions zip pdo_mysql gd iconv ctype intl opcache mbstring"]

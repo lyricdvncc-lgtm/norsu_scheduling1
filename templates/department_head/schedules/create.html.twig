@@ -293,9 +293,10 @@
                                class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition font-medium">
                                 Cancel
                             </a>
-                            <button type="submit"
-                                    class="px-8 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-sm hover:shadow-md">
-                                Create Schedule
+                            <button type="submit" id="submitBtn"
+                                    class="px-8 py-2.5 bg-green-600 text-white rounded-lg transition font-medium shadow-sm opacity-50 cursor-not-allowed"
+                                    disabled>
+                                <span id="submitBtnText">Fill all fields to continue</span>
                             </button>
                         </div>
                     </div>
@@ -472,10 +473,45 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (livePanel) {
                     livePanel.classList.add('hidden');
                 }
+                // Disable submit button when fields are incomplete
+                const submitBtn = document.getElementById('submitBtn');
+                const submitBtnText = document.getElementById('submitBtnText');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    submitBtn.classList.remove('hover:bg-green-700', 'hover:shadow-md');
+                }
+                if (submitBtnText) {
+                    submitBtnText.textContent = 'Fill all fields to continue';
+                }
                 return;
             }
 
             console.log('All required fields present - making API call...');
+
+            // Disable submit button during check
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.remove('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = 'Checking conflicts...';
+            }
+
+            // Disable submit button during check
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.remove('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = 'Checking conflicts...';
+            }
 
             // Show loading state
             const livePanel = document.getElementById('live-conflict-detection');
@@ -579,6 +615,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Red panel - Hard conflicts (blocks creation)
             livePanel.className = 'bg-gradient-to-br from-red-50 to-red-100 rounded-lg shadow-sm border-2 border-red-300 p-6';
             
+            // Keep submit button disabled for conflicts
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.remove('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = '⚠️ Cannot Create (Conflicts Detected)';
+            }
+            
             iconDiv.innerHTML = `
                 <svg class="w-8 h-8 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -641,16 +689,41 @@ document.addEventListener('DOMContentLoaded', function() {
             warningHtml += '</div>';
             detailsDiv.innerHTML = warningHtml;
             
-            // Enable submit button
+            // Enable submit button for warnings (warnings don't block)
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = 'Create Schedule (With Warnings)';
             }
             
         } else {
             // Green panel - No conflicts (show detailed verification)
             livePanel.className = 'bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg shadow-sm border-2 border-green-300 p-6';
+            
+            // Enable submit button only when no conflicts
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = '✅ Create Schedule';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-green-700', 'hover:shadow-md');
+            }
+            if (submitBtnText) {
+                submitBtnText.textContent = '✅ Create Schedule';
+            }
             
             iconDiv.innerHTML = `
                 <svg class="w-8 h-8 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

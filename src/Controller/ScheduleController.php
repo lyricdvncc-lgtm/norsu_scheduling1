@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Schedule;
+use App\Entity\CurriculumSubject;
 use App\Repository\ScheduleRepository;
 use App\Repository\RoomRepository;
 use App\Repository\SubjectRepository;
@@ -365,13 +366,13 @@ class ScheduleController extends AbstractController
                     
                     // Combine hard conflicts
                     $hardConflicts = array_filter($conflicts, function($conflict) {
-                        return $conflict['type'] === 'room_time_conflict';
+                        return in_array($conflict['type'], [
+                            'room_time_conflict',
+                            'section_conflict',
+                            'block_sectioning_conflict'
+                        ]);
                     });
                     $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
-                    $sectionTimeConflicts = array_filter($conflicts, function($conflict) {
-                        return $conflict['type'] === 'section_conflict';
-                    });
-                    $hardConflicts = array_merge($hardConflicts, $sectionTimeConflicts);
                     
                     if (!empty($hardConflicts)) {
                         foreach ($hardConflicts as $conflict) {
@@ -484,7 +485,7 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_schedule_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Schedule $schedule): Response
+    public function edit(Request $request, Schedule $schedule, \App\Service\ScheduleConflictDetector $conflictDetector): Response
     {
         // Get the department from the schedule's subject
         $scheduleDepartment = $schedule->getSubject() ? $schedule->getSubject()->getDepartment() : null;
@@ -518,6 +519,17 @@ class ScheduleController extends AbstractController
             $room = $this->roomRepository->find($roomId);
 
             if ($subject && $academicYear && $room && $semester && $dayPattern && $startTime && $endTime) {
+                // Store original values for rollback if needed
+                $originalSubject = $schedule->getSubject();
+                $originalAcademicYear = $schedule->getAcademicYear();
+                $originalSemester = $schedule->getSemester();
+                $originalRoom = $schedule->getRoom();
+                $originalSection = $schedule->getSection();
+                $originalDayPattern = $schedule->getDayPattern();
+                $originalStartTime = $schedule->getStartTime();
+                $originalEndTime = $schedule->getEndTime();
+                
+                // Apply new values temporarily for conflict checking
                 $schedule->setSubject($subject);
                 $schedule->setAcademicYear($academicYear);
                 $schedule->setSemester($semester);
@@ -526,36 +538,73 @@ class ScheduleController extends AbstractController
                 $schedule->setDayPattern($dayPattern);
                 $schedule->setStartTime(new \DateTime($startTime));
                 $schedule->setEndTime(new \DateTime($endTime));
-                $schedule->setNotes($notes);
-                $schedule->setEnrolledStudents($enrolledStudents ? (int)$enrolledStudents : null);
-                $schedule->setUpdatedAt(new \DateTime());
-
-                $this->entityManager->flush();
-
-                // Log the activity
-                $scheduleInfo = sprintf('%s - %s (%s)',
-                    $schedule->getSubject()->getTitle(),
-                    $schedule->getSection(),
-                    $schedule->getDayPattern()
-                );
-                $this->activityLogService->logScheduleActivity(
-                    'schedule.updated',
-                    $schedule->getId(),
-                    $scheduleInfo,
-                    [
-                        'subject' => $schedule->getSubject()->getTitle(),
-                        'section' => $schedule->getSection()
-                    ]
-                );
-
-                $this->addFlash('success', 'Schedule updated successfully!');
                 
-                // Redirect back to schedule list with department filter preserved
-                $departmentId = $scheduleDepartment ? $scheduleDepartment->getId() : null;
-                if ($departmentId) {
-                    return $this->redirectToRoute('app_schedule_index', ['department' => $departmentId]);
+                // Check for conflicts (excluding self)
+                $conflicts = $conflictDetector->detectConflicts($schedule, true);
+                $duplicateConflicts = $conflictDetector->checkDuplicateSubjectSection($schedule, true);
+                
+                // Combine hard conflicts
+                $hardConflicts = array_filter($conflicts, function($conflict) {
+                    return in_array($conflict['type'], [
+                        'room_time_conflict',
+                        'section_conflict',
+                        'block_sectioning_conflict'
+                    ]);
+                });
+                $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+                
+                if (!empty($hardConflicts)) {
+                    // Rollback changes
+                    $schedule->setSubject($originalSubject);
+                    $schedule->setAcademicYear($originalAcademicYear);
+                    $schedule->setSemester($originalSemester);
+                    $schedule->setRoom($originalRoom);
+                    $schedule->setSection($originalSection);
+                    $schedule->setDayPattern($originalDayPattern);
+                    $schedule->setStartTime($originalStartTime);
+                    $schedule->setEndTime($originalEndTime);
+                    
+                    // Show conflict errors
+                    foreach ($hardConflicts as $conflict) {
+                        $this->addFlash('error', '🚫 ' . $conflict['message']);
+                    }
+                    $this->addFlash('error', sprintf(
+                        'Cannot update schedule: %d conflict(s) detected. Please resolve all conflicts.',
+                        count($hardConflicts)
+                    ));
+                } else {
+                    // No conflicts, proceed with update
+                    $schedule->setNotes($notes);
+                    $schedule->setEnrolledStudents($enrolledStudents ? (int)$enrolledStudents : null);
+                    $schedule->setUpdatedAt(new \DateTime());
+
+                    $this->entityManager->flush();
+
+                    // Log the activity
+                    $scheduleInfo = sprintf('%s - %s (%s)',
+                        $schedule->getSubject()->getTitle(),
+                        $schedule->getSection(),
+                        $schedule->getDayPattern()
+                    );
+                    $this->activityLogService->logScheduleActivity(
+                        'schedule.updated',
+                        $schedule->getId(),
+                        $scheduleInfo,
+                        [
+                            'subject' => $schedule->getSubject()->getTitle(),
+                            'section' => $schedule->getSection()
+                        ]
+                    );
+
+                    $this->addFlash('success', 'Schedule updated successfully!');
+                    
+                    // Redirect back to schedule list with department filter preserved
+                    $departmentId = $scheduleDepartment ? $scheduleDepartment->getId() : null;
+                    if ($departmentId) {
+                        return $this->redirectToRoute('app_schedule_index', ['department' => $departmentId]);
+                    }
+                    return $this->redirectToRoute('app_schedule_index');
                 }
-                return $this->redirectToRoute('app_schedule_index');
             } else {
                 $this->addFlash('error', 'Please fill in all required fields.');
             }
@@ -697,6 +746,14 @@ class ScheduleController extends AbstractController
             $schedule->setDayPattern($data['day_pattern']);
             $schedule->setStatus('active');
             
+            // Set curriculum subject if provided (for block sectioning conflict detection)
+            if (isset($data['curriculum_subject_id']) && $data['curriculum_subject_id']) {
+                $curriculumSubject = $this->entityManager->getRepository(CurriculumSubject::class)->find($data['curriculum_subject_id']);
+                if ($curriculumSubject) {
+                    $schedule->setCurriculumSubject($curriculumSubject);
+                }
+            }
+            
             // Parse times
             $schedule->setStartTime(new \DateTime($data['start_time']));
             $schedule->setEndTime(new \DateTime($data['end_time']));
@@ -705,9 +762,11 @@ class ScheduleController extends AbstractController
             $conflicts = $conflictDetector->detectConflicts($schedule, $isEditingExisting);
             $duplicateConflicts = $conflictDetector->checkDuplicateSubjectSection($schedule, $isEditingExisting);
             
-            // Combine hard conflicts
+            // Combine hard conflicts - include block sectioning conflicts
             $hardConflicts = array_filter($conflicts, function($conflict) {
-                return $conflict['type'] === 'room_time_conflict' || $conflict['type'] === 'section_conflict';
+                return $conflict['type'] === 'room_time_conflict' 
+                    || $conflict['type'] === 'section_conflict'
+                    || $conflict['type'] === 'block_sectioning_conflict';
             });
             $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
             
@@ -757,7 +816,7 @@ class ScheduleController extends AbstractController
                 ->select('s.section', 's.semester', 's.dayPattern', 
                          's.startTime', 's.endTime',
                          'r.id as roomId', 'r.code as roomCode',
-                         'sub.code as subjectCode',
+                         'sub.code as subjectCode', 'sub.id as subjectId',
                          'ay.year', 'ay.id as yearId')
                 ->leftJoin('s.academicYear', 'ay')
                 ->leftJoin('s.room', 'r')
@@ -769,15 +828,37 @@ class ScheduleController extends AbstractController
                 ->getQuery()
                 ->getResult();
             
+            // Also get all schedules from OTHER subjects (for block sectioning conflict detection)
+            // We need to check if same section at same time exists in other subjects
+            $otherSchedules = $this->scheduleRepository->createQueryBuilder('s')
+                ->select('s.section', 's.semester', 's.dayPattern', 
+                         's.startTime', 's.endTime',
+                         'r.id as roomId', 'r.code as roomCode',
+                         'sub.code as subjectCode', 'sub.id as subjectId',
+                         'ay.year', 'ay.id as yearId')
+                ->leftJoin('s.academicYear', 'ay')
+                ->leftJoin('s.room', 'r')
+                ->leftJoin('s.subject', 'sub')
+                ->where('s.subject != :subjectId')
+                ->andWhere('s.status = :status')
+                ->setParameter('subjectId', $subjectId)
+                ->setParameter('status', 'active')
+                ->getQuery()
+                ->getResult();
+            
+            // Merge both result sets for comprehensive conflict checking
+            $allSchedules = array_merge($schedules, $otherSchedules);
+            
             // Extract unique sections
             $sections = [];
             $schedulesMap = [];
             
-            foreach ($schedules as $schedule) {
+            foreach ($allSchedules as $schedule) {
                 $section = $schedule['section'];
                 $semester = $schedule['semester'];
                 $year = $schedule['year'];
                 $yearId = $schedule['yearId'];
+                $scheduleSubjectId = $schedule['subjectId'];
                 
                 // Format time values
                 $startTime = $schedule['startTime'];
@@ -791,14 +872,14 @@ class ScheduleController extends AbstractController
                     $endTime = $endTime->format('H:i');
                 }
                 
-                // Add to unique sections list
-                if (!in_array($section, $sections)) {
+                // Add to unique sections list (only for current subject)
+                if ($scheduleSubjectId == $subjectId && !in_array($section, $sections)) {
                     $sections[] = $section;
                 }
                 
-                // Map for duplicate checking: subject_section_semester_yearId
-                // This ensures each subject can have its own Section A, B, etc.
-                $key = $subjectId . '_' . strtoupper(trim($section)) . '_' . $semester . '_' . $yearId;
+                // Map for conflict checking: subject_section_semester_yearId
+                // Include subject ID so we can distinguish between subjects
+                $key = $scheduleSubjectId . '_' . strtoupper(trim($section)) . '_' . $semester . '_' . $yearId;
                 
                 $schedulesMap[$key] = [
                     'section' => $section,
@@ -810,7 +891,8 @@ class ScheduleController extends AbstractController
                     'endTime' => $endTime ?? '',
                     'roomId' => $schedule['roomId'] ?? null,
                     'roomCode' => $schedule['roomCode'] ?? '',
-                    'subjectCode' => $schedule['subjectCode'] ?? ''
+                    'subjectCode' => $schedule['subjectCode'] ?? '',
+                    'subjectId' => $scheduleSubjectId
                 ];
             }
             

@@ -206,6 +206,11 @@ class DepartmentHeadController extends AbstractController
         try {
             $user = $this->userService->getUserById($id);
             
+            // Explicitly fetch the college to ensure it's loaded (not lazy-loaded proxy)
+            if ($user->getCollege()) {
+                $user->getCollege()->getName(); // This forces Doctrine to load the college
+            }
+            
             // Check access
             if (!$this->departmentHeadService->canAccessUser($departmentHead, $user)) {
                 throw $this->createAccessDeniedException('You can only edit faculty in your department.');
@@ -481,6 +486,308 @@ class DepartmentHeadController extends AbstractController
             'selected_semester' => $workloadData['selected_semester'],
             'status_filter' => $statusFilter,
         ]));
+    }
+
+    #[Route('/reports/history', name: 'reports_history', methods: ['GET'])]
+    public function historyReports(Request $request): Response
+    {
+        /** @var User $departmentHead */
+        $departmentHead = $this->getUser();
+        $department = $departmentHead->getDepartment();
+
+        if (!$department) {
+            $this->addFlash('error', 'You are not assigned to a department.');
+            return $this->redirectToRoute('department_head_dashboard');
+        }
+
+        // Get export parameters
+        $exportType = $request->query->get('export', '');
+        $selectedYear = $request->query->get('year', '');
+        $selectedSemester = $request->query->get('semester', '');
+        $searchTerm = $request->query->get('search', '');
+        
+        // Get active semester for default
+        $activeYear = $this->systemSettingsService->getActiveAcademicYear();
+        $activeSemester = $this->systemSettingsService->getActiveSemester();
+        
+        // Get all academic years for filter dropdown
+        $academicYears = $this->entityManager->getRepository(\App\Entity\AcademicYear::class)
+            ->createQueryBuilder('ay')
+            ->select('ay.year')
+            ->distinct(true)
+            ->orderBy('ay.year', 'DESC')
+            ->getQuery()
+            ->getResult();
+        $years = array_column($academicYears, 'year');
+        
+        // Get department group IDs if exists
+        $departmentIds = [$department->getId()];
+        if ($department->getDepartmentGroup()) {
+            $departmentIds = $department->getDepartmentGroup()
+                ->getDepartments()
+                ->map(fn($d) => $d->getId())
+                ->toArray();
+        }
+        
+        // Load ALL rooms used by this department
+        $rooms = $this->entityManager->getRepository(Room::class)
+            ->createQueryBuilder('r')
+            ->leftJoin(Schedule::class, 's', 'WITH', 's.room = r')
+            ->leftJoin('s.subject', 'sub')
+            ->where('sub.department IN (:departmentIds)')
+            ->setParameter('departmentIds', $departmentIds)
+            ->groupBy('r.id')
+            ->orderBy('r.building', 'ASC')
+            ->addOrderBy('r.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+        
+        // Load ALL schedules for this department
+        $schedules = $this->entityManager->getRepository(Schedule::class)
+            ->createQueryBuilder('s')
+            ->select('s', 'r', 'sub', 'd', 'u')
+            ->leftJoin('s.room', 'r')
+            ->leftJoin('s.subject', 'sub')
+            ->leftJoin('sub.department', 'd')
+            ->leftJoin('s.faculty', 'u')
+            ->where('sub.department IN (:departmentIds)')
+            ->setParameter('departmentIds', $departmentIds)
+            ->getQuery()
+            ->getResult();
+        
+        // Build room data
+        $roomsData = [];
+        foreach ($rooms as $room) {
+            $roomSchedules = array_filter($schedules, fn($s) => $s->getRoom() && $s->getRoom()->getId() === $room->getId());
+            
+            $roomYears = [];
+            $roomSemesters = [];
+            foreach ($roomSchedules as $schedule) {
+                if ($schedule->getAcademicYear()) {
+                    $roomYears[] = $schedule->getAcademicYear();
+                }
+                if ($schedule->getSemester()) {
+                    $roomSemesters[] = $schedule->getSemester();
+                }
+            }
+            
+            $roomsData[] = [
+                0 => $room,
+                'scheduleCount' => count($roomSchedules),
+                'years' => implode(', ', array_unique($roomYears)),
+                'semesters' => implode(', ', array_unique($roomSemesters))
+            ];
+        }
+        
+        // Load faculty from this department
+        $facultyQuery = $this->entityManager->getRepository(User::class)
+            ->createQueryBuilder('u')
+            ->select('u', 'COUNT(s.id) as scheduleCount', 'SUM(sub.units) as totalUnits')
+            ->leftJoin(Schedule::class, 's', 'WITH', 's.faculty = u')
+            ->leftJoin('s.subject', 'sub')
+            ->where('u.role = :role')
+            ->andWhere('u.isActive = :active')
+            ->andWhere('u.department IN (:departmentIds)')
+            ->setParameter('role', 3)
+            ->setParameter('active', true)
+            ->setParameter('departmentIds', $departmentIds)
+            ->groupBy('u.id')
+            ->orderBy('u.lastName', 'ASC')
+            ->addOrderBy('u.firstName', 'ASC');
+        
+        $facultyResults = $facultyQuery->getQuery()->getResult();
+        
+        // Build faculty data
+        $facultyData = [];
+        foreach ($facultyResults as $result) {
+            $faculty = $result[0];
+            $facultySchedules = array_filter($schedules, fn($s) => $s->getFaculty() && $s->getFaculty()->getId() === $faculty->getId());
+            
+            $facultyYears = [];
+            $facultySemesters = [];
+            
+            foreach ($facultySchedules as $schedule) {
+                if ($schedule->getAcademicYear()) {
+                    $facultyYears[] = $schedule->getAcademicYear();
+                }
+                if ($schedule->getSemester()) {
+                    $facultySemesters[] = $schedule->getSemester();
+                }
+            }
+            
+            $facultyData[] = [
+                0 => $faculty,
+                'scheduleCount' => $result['scheduleCount'],
+                'totalUnits' => $result['totalUnits'],
+                'years' => implode(', ', array_unique($facultyYears)),
+                'semesters' => implode(', ', array_unique($facultySemesters))
+            ];
+        }
+        
+        // Load subjects from this department
+        $subjects = $this->entityManager->getRepository(\App\Entity\Subject::class)
+            ->createQueryBuilder('sub')
+            ->leftJoin('sub.department', 'd')
+            ->where('sub.deletedAt IS NULL')
+            ->andWhere('sub.department IN (:departmentIds)')
+            ->setParameter('departmentIds', $departmentIds)
+            ->orderBy('sub.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+        
+        // Build subjects data
+        $subjectsData = [];
+        foreach ($subjects as $subject) {
+            $subjectSchedules = array_filter($schedules, fn($s) => $s->getSubject() && $s->getSubject()->getId() === $subject->getId());
+            
+            $subjectYears = [];
+            $subjectSemesters = [];
+            $scheduleDetails = [];
+            
+            foreach ($subjectSchedules as $schedule) {
+                if ($schedule->getAcademicYear()) {
+                    $subjectYears[$schedule->getAcademicYear()->getId()] = $schedule->getAcademicYear()->getYear();
+                }
+                if ($schedule->getSemester()) {
+                    $subjectSemesters[] = $schedule->getSemester();
+                }
+                
+                $scheduleDetails[] = [
+                    'section' => $schedule->getSection() ?: 'N/A',
+                    'time' => $schedule->getStartTime()->format('h:i A') . ' - ' . $schedule->getEndTime()->format('h:i A'),
+                    'day' => $schedule->getDayPattern(),
+                    'room' => $schedule->getRoom() ? $schedule->getRoom()->getCode() : 'N/A',
+                    'faculty' => $schedule->getFaculty() ? ($schedule->getFaculty()->getFirstName() . ' ' . $schedule->getFaculty()->getLastName()) : 'N/A',
+                    'year' => $schedule->getAcademicYear() ? $schedule->getAcademicYear()->getYear() : null,
+                    'semester' => $schedule->getSemester() ?: null
+                ];
+            }
+            
+            $subjectsData[] = [
+                0 => $subject,
+                'schedules' => $scheduleDetails,
+                'years' => implode(', ', array_unique($subjectYears)),
+                'semesters' => implode(', ', array_unique($subjectSemesters)),
+                'yearsList' => array_values(array_unique($subjectYears)),
+                'semestersList' => array_values(array_unique($subjectSemesters))
+            ];
+        }
+        
+        // Handle exports (will implement PDF export methods later)
+        if ($exportType === 'rooms-pdf') {
+            return $this->exportDepartmentRoomsPdf($roomsData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
+        } elseif ($exportType === 'faculty-pdf') {
+            return $this->exportDepartmentFacultyPdf($facultyData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
+        }
+        
+        // Create display string for active semester
+        $activeSemesterDisplay = $activeYear && $activeSemester 
+            ? $activeYear->getYear() . ' | ' . $activeSemester . ' Semester'
+            : null;
+        
+        return $this->render('department_head/reports/history.html.twig', array_merge($this->getBaseTemplateData(), [
+            'years' => $years,
+            'selectedYear' => '',
+            'selectedSemester' => '',
+            'searchTerm' => '',
+            'activeYear' => $activeYear,
+            'activeSemester' => $activeSemester,
+            'activeSemesterDisplay' => $activeSemesterDisplay,
+            'roomsData' => $roomsData,
+            'facultyData' => $facultyData,
+            'subjectsData' => $subjectsData,
+            'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
+        ]));
+    }
+
+    private function exportDepartmentRoomsPdf(array $roomsData, ?string $year, ?string $semester, string $departmentName, ?string $searchTerm): Response
+    {
+        // Filter rooms data based on parameters
+        $filteredRooms = $this->filterHistoryData($roomsData, $year, $semester, $searchTerm);
+        
+        $pdfService = new \App\Service\RoomsReportPdfService($this->entityManager);
+        $pdfContent = $pdfService->generateRoomsReportPdf($filteredRooms, $year, $semester, $departmentName, $searchTerm);
+        
+        $filenameParts = ['rooms', preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentName))];
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search';
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.pdf';
+        
+        return new Response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
+    }
+
+    private function exportDepartmentFacultyPdf(array $facultyData, ?string $year, ?string $semester, string $departmentName, ?string $searchTerm): Response
+    {
+        // Filter faculty data based on parameters
+        $filteredFaculty = $this->filterHistoryData($facultyData, $year, $semester, $searchTerm);
+        
+        $pdfService = new \App\Service\FacultyReportPdfService($this->entityManager);
+        $pdfContent = $pdfService->generateFacultyReportPdf($filteredFaculty, $year, $semester, $departmentName, $searchTerm);
+        
+        $filenameParts = ['faculty', preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentName))];
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search';
+        $filenameParts[] = date('Y-m-d');
+        
+        $filename = implode('_', $filenameParts) . '.pdf';
+        
+        return new Response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
+    }
+
+    private function filterHistoryData(array $data, ?string $year, ?string $semester, ?string $searchTerm): array
+    {
+        $filtered = [];
+        
+        foreach ($data as $item) {
+            $entity = $item[0];
+            
+            // Filter by year
+            if ($year && !empty($item['years']) && !str_contains($item['years'], $year)) {
+                continue;
+            }
+            
+            // Filter by semester
+            if ($semester && !empty($item['semesters']) && !str_contains(strtolower($item['semesters']), strtolower($semester))) {
+                continue;
+            }
+            
+            // Filter by search term
+            if ($searchTerm) {
+                $searchLower = strtolower($searchTerm);
+                $searchable = '';
+                
+                if (method_exists($entity, 'getCode')) {
+                    $searchable .= ' ' . strtolower($entity->getCode());
+                }
+                if (method_exists($entity, 'getName')) {
+                    $searchable .= ' ' . strtolower($entity->getName());
+                }
+                if (method_exists($entity, 'getFirstName')) {
+                    $searchable .= ' ' . strtolower($entity->getFirstName() . ' ' . $entity->getLastName());
+                }
+                if (method_exists($entity, 'getEmployeeId')) {
+                    $searchable .= ' ' . strtolower($entity->getEmployeeId());
+                }
+                
+                if (!str_contains($searchable, $searchLower)) {
+                    continue;
+                }
+            }
+            
+            $filtered[] = $item;
+        }
+        
+        return $filtered;
     }
 
     #[Route('/curricula/bulk-upload', name: 'curricula_bulk_upload', methods: ['POST'])]

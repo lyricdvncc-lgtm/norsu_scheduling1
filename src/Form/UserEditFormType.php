@@ -37,6 +37,8 @@ class UserEditFormType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $isDepartmentHead = $options['is_department_head'];
+        
         $builder
             ->add('username', TextType::class, [
                 'label' => 'Username',
@@ -126,6 +128,7 @@ class UserEditFormType extends AbstractType
                         'message' => 'Please select a role',
                     ]),
                 ],
+                'attr' => $isDepartmentHead ? ['disabled' => 'disabled'] : [], // Use HTML disabled attribute
             ])
             ->add('college', EntityType::class, [
                 'class' => College::class,
@@ -141,27 +144,23 @@ class UserEditFormType extends AbstractType
                 'label' => 'College',
                 'placeholder' => 'Select a college',
                 'required' => false,
-                'mapped' => false, // We'll handle the mapping manually
+                'mapped' => true,
+                'attr' => $isDepartmentHead ? ['disabled' => 'disabled'] : [], // Use HTML disabled attribute instead
             ]);
 
         // Add form event listener to dynamically filter departments based on college
-        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) {
+        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) use ($isDepartmentHead) {
             $user = $event->getData();
             $form = $event->getForm();
             
             // Get the user's current college
             $college = $user ? $user->getCollege() : null;
             
-            // Set the college field value
-            if ($college) {
-                $form->get('college')->setData($college);
-            }
-            
-            // Add department field with filtering
+            // Add department field with filtering (college field is now mapped, so it will populate automatically)
             $this->addDepartmentField($form, $college);
         });
 
-        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) {
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($isDepartmentHead) {
             $data = $event->getData();
             $form = $event->getForm();
             
@@ -204,6 +203,10 @@ class UserEditFormType extends AbstractType
 
     private function addDepartmentField(FormInterface $form, ?College $college): void
     {
+        // Get the form options to check if this is for department head
+        $options = $form->getConfig()->getOptions();
+        $isDepartmentHead = $options['is_department_head'] ?? false;
+        
         $form->add('department', EntityType::class, [
             'class' => Department::class,
             'choice_label' => 'name',
@@ -225,7 +228,7 @@ class UserEditFormType extends AbstractType
             'label' => 'Department',
             'placeholder' => 'Select a department',
             'required' => false,
-            'disabled' => false, // Always keep enabled - JavaScript will handle the filtering
+            'attr' => $isDepartmentHead ? ['disabled' => 'disabled'] : [], // Use HTML disabled attribute
         ]);
     }
 

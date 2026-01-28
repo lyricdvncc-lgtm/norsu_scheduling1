@@ -30,58 +30,50 @@ class ScheduleConflictDetector
     {
         $conflicts = [];
 
-        // Ensure we have a room before checking
-        if (!$schedule->getRoom()) {
-            return $conflicts;
-        }
+        // Check room conflicts only if a room is assigned
+        if ($schedule->getRoom()) {
+            // Get all schedules for the same room (removed day pattern filter to check overlapping days)
+            $qb = $this->entityManager->createQueryBuilder();
+            $qb->select('s')
+                ->from(Schedule::class, 's')
+                ->where('s.room = :room')
+                ->andWhere('s.academicYear = :academicYear')
+                ->andWhere('s.semester = :semester')
+                ->andWhere('s.status = :status')
+                ->setParameter('room', $schedule->getRoom())
+                ->setParameter('academicYear', $schedule->getAcademicYear())
+                ->setParameter('semester', $schedule->getSemester())
+                ->setParameter('status', 'active');
 
-        // Get all schedules for the same room (removed day pattern filter to check overlapping days)
-        $qb = $this->entityManager->createQueryBuilder();
-        $qb->select('s')
-            ->from(Schedule::class, 's')
-            ->where('s.room = :room')
-            ->andWhere('s.academicYear = :academicYear')
-            ->andWhere('s.semester = :semester')
-            ->andWhere('s.status = :status')
-            ->setParameter('room', $schedule->getRoom())
-            ->setParameter('academicYear', $schedule->getAcademicYear())
-            ->setParameter('semester', $schedule->getSemester())
-            ->setParameter('status', 'active');
+            // Exclude the schedule itself if it's an update
+            if ($excludeSelf && $schedule->getId()) {
+                $qb->andWhere('s.id != :scheduleId')
+                    ->setParameter('scheduleId', $schedule->getId());
+            }
 
-        // Exclude the schedule itself if it's an update
-        if ($excludeSelf && $schedule->getId()) {
-            $qb->andWhere('s.id != :scheduleId')
-                ->setParameter('scheduleId', $schedule->getId());
-        }
-
-        $existingSchedules = $qb->getQuery()->getResult();
-        
-        // Check for time overlaps AND day pattern overlaps
-        foreach ($existingSchedules as $existing) {
-            $hasDayOverlap = $this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern());
-            $hasTimeOverlap = $this->hasTimeOverlap($schedule, $existing);
+            $existingSchedules = $qb->getQuery()->getResult();
             
-            // Check if day patterns overlap AND times overlap
-            if ($hasDayOverlap && $hasTimeOverlap) {
-                $room = $existing->getRoom();
-                $roomDisplay = $room->getCode();
-                if ($room->getName()) {
-                    $roomDisplay .= ' - ' . $room->getName();
-                }
+            // Check for time overlaps AND day pattern overlaps
+            foreach ($existingSchedules as $existing) {
+                $hasDayOverlap = $this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern());
+                $hasTimeOverlap = $this->hasTimeOverlap($schedule, $existing);
                 
-                $conflicts[] = [
-                    'type' => 'room_time_conflict',
-                    'schedule' => $existing,
-                    'message' => sprintf(
-                        'Room %s is already booked for %s (%s) from %s to %s (Section: %s)',
-                        $roomDisplay,
-                        $existing->getSubject()->getCode(),
-                        $existing->getDayPattern(),
-                        $existing->getStartTime()->format('g:i A'),
-                        $existing->getEndTime()->format('g:i A'),
-                        $existing->getSection() ?? 'N/A'
-                    )
-                ];
+                // Check if day patterns overlap AND times overlap
+                if ($hasDayOverlap && $hasTimeOverlap) {
+                    $conflicts[] = [
+                        'type' => 'room_time_conflict',
+                        'schedule' => $existing,
+                        'message' => sprintf(
+                            'Room %s is already booked for %s (%s) from %s to %s (Section: %s)',
+                            $existing->getRoom()->getName(),
+                            $existing->getSubject()->getCode(),
+                            $existing->getDayPattern(),
+                            $existing->getStartTime()->format('g:i A'),
+                            $existing->getEndTime()->format('g:i A'),
+                            $existing->getSection() ?? 'N/A'
+                        )
+                    ];
+                }
             }
         }
 
@@ -89,6 +81,13 @@ class ScheduleConflictDetector
         if ($schedule->getSection()) {
             $sectionConflicts = $this->checkSectionConflicts($schedule, $excludeSelf);
             $conflicts = array_merge($conflicts, $sectionConflicts);
+        }
+
+        // Check for block sectioning conflicts (same year level and section at same time)
+        // Works with or without curriculum data (fallback mode available)
+        if ($schedule->getSection()) {
+            $blockSectionConflicts = $this->checkBlockSectioningConflicts($schedule, $excludeSelf);
+            $conflicts = array_merge($conflicts, $blockSectionConflicts);
         }
 
         return $conflicts;
@@ -117,7 +116,7 @@ class ScheduleConflictDetector
     /**
      * Check if two day patterns have overlapping days
      * 
-     * @param string $pattern1 First day pattern (e.g., "Mon-Fri (Daily)", "MWF", "TTh")
+     * @param string $pattern1 First day pattern (e.g., "Mon-Fri (Daily)", "M-W-F", "T-TH")
      * @param string $pattern2 Second day pattern
      * @return bool True if the patterns share at least one common day
      */
@@ -147,7 +146,7 @@ class ScheduleConflictDetector
     /**
      * Extract individual days from a day pattern
      * 
-     * @param string $pattern Day pattern (e.g., "MTWTHF", "MWF", "TTH", "MW")
+     * @param string $pattern Day pattern (e.g., "M-T-TH-F", "M-W-F", "T-TH", "M-W")
      * @return array Array of day names
      */
     private function extractDays(string $pattern): array
@@ -157,16 +156,7 @@ class ScheduleConflictDetector
         // Normalize pattern to uppercase for consistent comparison
         $pattern = strtoupper(trim($pattern));
 
-        // Check for common full patterns first
-        if (strpos($pattern, 'MTWTHF') !== false || strpos($pattern, 'DAILY') !== false || strpos($pattern, 'MON-FRI') !== false) {
-            return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        }
-        
-        if (strpos($pattern, 'MON-SAT') !== false) {
-            return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        }
-
-        // Handle specific patterns
+        // Handle specific single-day patterns FIRST (before any string operations)
         if ($pattern === 'SAT' || $pattern === 'SATURDAY') {
             return ['Saturday'];
         }
@@ -175,45 +165,56 @@ class ScheduleConflictDetector
             return ['Sunday'];
         }
 
-        // Parse individual day codes from the pattern
-        // We need to check longer patterns first to avoid false matches
+        // Check for new daily pattern (skipping Wednesday)
+        if (strpos($pattern, 'M-T-TH-F') !== false || strpos($pattern, 'MTTHF') !== false) {
+            return ['Monday', 'Tuesday', 'Thursday', 'Friday'];
+        }
         
+        if (strpos($pattern, 'MON-SAT') !== false) {
+            return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        }
+
+        // Create a marked pattern where we'll replace matched days with placeholders
+        $markedPattern = $pattern;
+
         // Handle "TH" for Thursday (must check before "T")
-        if (strpos($pattern, 'TH') !== false) {
+        if (strpos($markedPattern, 'TH') !== false) {
             $days[] = 'Thursday';
-            // Remove TH to avoid matching T again
-            $pattern = str_replace('TH', '', $pattern);
+            // Replace with placeholder to prevent T from being matched as Tuesday
+            $markedPattern = str_replace('TH', '##', $markedPattern);
         }
 
         // Handle Sunday (SU)
-        if (strpos($pattern, 'SU') !== false) {
+        if (strpos($markedPattern, 'SU') !== false) {
             $days[] = 'Sunday';
-            $pattern = str_replace('SU', '', $pattern);
+            $markedPattern = str_replace('SU', '##', $markedPattern);
         }
 
-        // Handle Saturday (SA)
-        if (strpos($pattern, 'SA') !== false) {
+        // Handle Saturday (SA or SAT)
+        if (strpos($markedPattern, 'SAT') !== false) {
             $days[] = 'Saturday';
-            $pattern = str_replace('SA', '', $pattern);
+            $markedPattern = str_replace('SAT', '##', $markedPattern);
+        } elseif (strpos($markedPattern, 'SA') !== false) {
+            $days[] = 'Saturday';
+            $markedPattern = str_replace('SA', '##', $markedPattern);
         }
 
-        // Handle remaining single letter days
-        if (strpos($pattern, 'M') !== false) {
+        // Now handle single letter days - use the marked pattern
+        if (strpos($markedPattern, 'M') !== false) {
             $days[] = 'Monday';
         }
-        if (strpos($pattern, 'T') !== false) {
+        if (strpos($markedPattern, 'T') !== false) {
             $days[] = 'Tuesday';
         }
-        if (strpos($pattern, 'W') !== false) {
+        if (strpos($markedPattern, 'W') !== false) {
             $days[] = 'Wednesday';
         }
-        if (strpos($pattern, 'F') !== false) {
+        if (strpos($markedPattern, 'F') !== false) {
             $days[] = 'Friday';
         }
 
         return array_unique($days);
     }
-
     /**
      * Check if same section is scheduled for multiple subjects at the same time
      */
@@ -248,12 +249,6 @@ class ScheduleConflictDetector
             // Check if day patterns overlap AND times overlap
             if ($this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern())
                 && $this->hasTimeOverlap($schedule, $existing)) {
-                $room = $existing->getRoom();
-                $roomDisplay = $room->getCode();
-                if ($room->getName()) {
-                    $roomDisplay .= ' - ' . $room->getName();
-                }
-                
                 $conflicts[] = [
                     'type' => 'section_conflict',
                     'schedule' => $existing,
@@ -264,7 +259,117 @@ class ScheduleConflictDetector
                         $existing->getDayPattern(),
                         $existing->getStartTime()->format('g:i A'),
                         $existing->getEndTime()->format('g:i A'),
-                        $roomDisplay
+                        $existing->getRoom()->getName()
+                    )
+                ];
+            }
+        }
+
+        return $conflicts;
+    }
+
+    /**
+     * Check for block sectioning conflicts
+     * In block sectioning, students in the same year level and section take ALL subjects together
+     * Therefore, if two different subjects are scheduled for the same section at the same time,
+     * students cannot attend both classes
+     */
+    private function checkBlockSectioningConflicts(Schedule $schedule, bool $excludeSelf = false): array
+    {
+        $conflicts = [];
+        $section = $schedule->getSection();
+
+        // Skip if no section defined
+        if (!$section) {
+            return $conflicts;
+        }
+
+        // Get the year level from the curriculum subject
+        $curriculumSubject = $schedule->getCurriculumSubject();
+        $yearLevel = null;
+        
+        if ($curriculumSubject && $curriculumSubject->getCurriculumTerm()) {
+            // PREFERRED METHOD: Use curriculum data for accurate year level
+            $yearLevel = $curriculumSubject->getCurriculumTerm()->getYearLevel();
+            
+            // Find all schedules with the SAME year level and section but DIFFERENT subjects
+            $qb = $this->entityManager->createQueryBuilder();
+            $qb->select('s')
+                ->from(Schedule::class, 's')
+                ->join('s.curriculumSubject', 'cs')
+                ->join('cs.curriculumTerm', 'ct')
+                ->where('s.section = :section')
+                ->andWhere('ct.year_level = :yearLevel')
+                ->andWhere('s.subject != :subject') // Different subject - this is the key!
+                ->andWhere('s.academicYear = :academicYear')
+                ->andWhere('s.semester = :semester')
+                ->andWhere('s.status = :status')
+                ->setParameter('section', $section)
+                ->setParameter('yearLevel', $yearLevel)
+                ->setParameter('subject', $schedule->getSubject())
+                ->setParameter('academicYear', $schedule->getAcademicYear())
+                ->setParameter('semester', $schedule->getSemester())
+                ->setParameter('status', 'active');
+
+            if ($excludeSelf && $schedule->getId()) {
+                $qb->andWhere('s.id != :scheduleId')
+                    ->setParameter('scheduleId', $schedule->getId());
+            }
+
+            $existingSchedules = $qb->getQuery()->getResult();
+        } else {
+            // FALLBACK METHOD: When curriculum data is not available,
+            // check for same section + different subject conflicts
+            // This assumes sections follow block sectioning model
+            $qb = $this->entityManager->createQueryBuilder();
+            $qb->select('s')
+                ->from(Schedule::class, 's')
+                ->where('s.section = :section')
+                ->andWhere('s.subject != :subject') // Different subject
+                ->andWhere('s.academicYear = :academicYear')
+                ->andWhere('s.semester = :semester')
+                ->andWhere('s.status = :status')
+                ->setParameter('section', $section)
+                ->setParameter('subject', $schedule->getSubject())
+                ->setParameter('academicYear', $schedule->getAcademicYear())
+                ->setParameter('semester', $schedule->getSemester())
+                ->setParameter('status', 'active');
+
+            if ($excludeSelf && $schedule->getId()) {
+                $qb->andWhere('s.id != :scheduleId')
+                    ->setParameter('scheduleId', $schedule->getId());
+            }
+
+            $existingSchedules = $qb->getQuery()->getResult();
+        }
+
+        foreach ($existingSchedules as $existing) {
+            // Check if day patterns overlap AND times overlap
+            if ($this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern())
+                && $this->hasTimeOverlap($schedule, $existing)) {
+                
+                // Get year level for display (if available)
+                $displayYearLevel = $yearLevel ?? 'Unknown';
+                $existingYearLevel = null;
+                
+                if ($existing->getCurriculumSubject() && $existing->getCurriculumSubject()->getCurriculumTerm()) {
+                    $existingYearLevel = $existing->getCurriculumSubject()->getCurriculumTerm()->getYearLevel();
+                }
+
+                $conflicts[] = [
+                    'type' => 'block_sectioning_conflict',
+                    'schedule' => $existing,
+                    'message' => sprintf(
+                        'BLOCK SECTIONING CONFLICT: %sSection %s students cannot attend both %s and %s at the same time (%s, %s - %s). Faculty: %s, Room: %s',
+                        $yearLevel ? "Year $yearLevel " : '',
+                        $section,
+                        $schedule->getSubject()->getCode(),
+                        $existing->getSubject()->getCode(),
+                        $existing->getDayPattern(),
+                        $existing->getStartTime()->format('g:i A'),
+                        $existing->getEndTime()->format('g:i A'),
+                        $existing->getFaculty() ? $existing->getFaculty()->getName() : 'Unassigned',
+                        $existing->getRoom() ? $existing->getRoom()->getName() : 'Unassigned'
                     )
                 ];
             }
@@ -306,12 +411,6 @@ class ScheduleConflictDetector
         $existingSchedules = $qb->getQuery()->getResult();
 
         foreach ($existingSchedules as $existing) {
-            $room = $existing->getRoom();
-            $roomDisplay = $room->getCode();
-            if ($room->getName()) {
-                $roomDisplay .= ' - ' . $room->getName();
-            }
-            
             $conflicts[] = [
                 'type' => 'duplicate_subject_section',
                 'schedule' => $existing,
@@ -322,7 +421,7 @@ class ScheduleConflictDetector
                     $existing->getDayPattern(),
                     $existing->getStartTime()->format('g:i A'),
                     $existing->getEndTime()->format('g:i A'),
-                    $roomDisplay
+                    $existing->getRoom()->getName()
                 )
             ];
         }

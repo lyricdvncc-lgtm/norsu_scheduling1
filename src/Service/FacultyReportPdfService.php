@@ -224,15 +224,15 @@ class FacultyReportPdfService
             
             // Column 3: Faculty Name
             $pdf->SetXY($currentX + 42, $currentY);
-            $pdf->MultiCell(50, $maxHeight, $fullName, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(50, $maxHeight, $fullName, 1, 'L', true, 0, $currentX + 42, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Column 4: Position
             $pdf->SetXY($currentX + 92, $currentY);
-            $pdf->MultiCell(40, $maxHeight, $position ?? '', 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(40, $maxHeight, $position ?? '', 1, 'L', true, 0, $currentX + 92, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Column 5: Department
             $pdf->SetXY($currentX + 132, $currentY);
-            $pdf->MultiCell(40, $maxHeight, $department, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(40, $maxHeight, $department, 1, 'L', true, 0, $currentX + 132, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Column 6: Units
             $pdf->SetXY($currentX + 172, $currentY);

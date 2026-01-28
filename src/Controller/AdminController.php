@@ -2584,6 +2584,9 @@ class AdminController extends AbstractController
         $preselectedRole = $request->query->getInt('role');
         if ($preselectedRole && in_array($preselectedRole, [1, 2, 3])) {
             $user->setRole($preselectedRole);
+        } else {
+            // Default to Faculty role if not specified
+            $user->setRole(3);
         }
         
         $form = $this->createForm(UserFormType::class, $user, ['is_edit' => false]);
@@ -2998,6 +3001,68 @@ class AdminController extends AbstractController
             return new JsonResponse([
                 'success' => false,
                 'message' => 'Error performing bulk action: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/users/invalid-roles', name: 'users_invalid_roles')]
+    public function usersWithInvalidRoles(Request $request): Response
+    {
+        // Find all users with null or invalid roles
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('u')
+            ->from(User::class, 'u')
+            ->where($qb->expr()->orX(
+                $qb->expr()->isNull('u.role'),
+                $qb->expr()->notIn('u.role', [1, 2, 3])
+            ))
+            ->orderBy('u.createdAt', 'DESC');
+
+        $usersWithInvalidRoles = $qb->getQuery()->getResult();
+
+        return $this->render('admin/users/invalid_roles.html.twig', array_merge($this->getBaseTemplateData(), [
+            'page_title' => 'Users with Invalid Roles',
+            'users' => $usersWithInvalidRoles,
+        ]));
+    }
+
+    #[Route('/users/{id}/assign-role', name: 'users_assign_role', methods: ['POST'])]
+    public function assignRole(Request $request, int $id): JsonResponse
+    {
+        $user = $this->entityManager->getRepository(User::class)->find($id);
+        
+        if (!$user) {
+            return new JsonResponse(['success' => false, 'message' => 'User not found.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $role = $data['role'] ?? null;
+
+        if (!in_array($role, [1, 2, 3])) {
+            return new JsonResponse(['success' => false, 'message' => 'Invalid role selected.'], 400);
+        }
+
+        try {
+            $oldRoleString = $user->getRoleString();
+            $user->setRole($role);
+            $this->entityManager->flush();
+
+            $roleNames = [1 => 'Administrator', 2 => 'Department Head', 3 => 'Faculty'];
+            
+            $this->activityLogService->logUserActivity('user.role_assigned', $user, [
+                'old_role' => $oldRoleString,
+                'new_role' => $roleNames[$role],
+            ]);
+
+            return new JsonResponse([
+                'success' => true,
+                'message' => "Role assigned successfully to {$user->getFullName()}.",
+                'role' => $roleNames[$role]
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Error assigning role: ' . $e->getMessage()
             ], 500);
         }
     }

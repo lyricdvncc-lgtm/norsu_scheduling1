@@ -207,11 +207,11 @@ class RoomsReportPdfService
             
             // Column 2: Room Code
             $pdf->SetXY($currentX + 12, $currentY);
-            $pdf->MultiCell(45, $maxHeight, $room->getCode(), 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(45, $maxHeight, $room->getCode(), 1, 'L', true, 0, $currentX + 12, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Column 3: Building
             $pdf->SetXY($currentX + 57, $currentY);
-            $pdf->MultiCell(45, $maxHeight, $room->getBuilding() ?? '', 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(45, $maxHeight, $room->getBuilding() ?? '', 1, 'L', true, 0, $currentX + 57, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Column 4: Capacity
             $pdf->SetXY($currentX + 102, $currentY);
@@ -223,7 +223,7 @@ class RoomsReportPdfService
             
             // Column 6: Departments
             $pdf->SetXY($currentX + 150, $currentY);
-            $pdf->MultiCell(45, $maxHeight, $departments, 1, 'L', true, 0, '', '', true, 0, false, true, $maxHeight, 'M');
+            $pdf->MultiCell(45, $maxHeight, $departments, 1, 'L', true, 0, $currentX + 150, $currentY, true, 0, false, true, $maxHeight, 'M');
             
             // Move to next row
             $pdf->SetXY($currentX, $currentY + $maxHeight);

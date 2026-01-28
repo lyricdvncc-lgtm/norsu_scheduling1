@@ -374,8 +374,9 @@
                                 Cancel
                             </a>
                             <button type="submit" id="submitBtn"
-                                    class="px-8 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium shadow-sm hover:shadow-md">
-                                <span id="submitBtnText">Create Schedule</span>
+                                    class="px-8 py-2.5 bg-green-600 text-white rounded-lg transition font-medium shadow-sm opacity-50 cursor-not-allowed"
+                                    disabled>
+                                <span id="submitBtnText">Fill all fields to continue</span>
                             </button>
                         </div>
                     </div>
@@ -469,6 +470,7 @@
 <script>
 // Store existing schedules data
 let existingSchedules = {};
+let currentSubjectId = null; // Track which subject we're creating schedules for
 
 // Store all room schedules (for cross-subject conflict detection)
 let allRoomSchedules = {};
@@ -508,11 +510,13 @@ function generateSectionColumns() {
     // Clear existing columns
     container.innerHTML = '';
     
-    // Get existing sections to determine starting letter
-    const existingSections = Object.values(existingSchedules).map(s => s.section.toUpperCase());
+    // Get existing sections for CURRENT SUBJECT ONLY to determine starting letter
+    const existingSections = Object.values(existingSchedules)
+        .filter(s => s.subjectId == currentSubjectId)
+        .map(s => s.section.toUpperCase());
     const startingIndex = getNextAvailableSectionIndex(existingSections);
     
-    console.log('Existing sections:', existingSections);
+    console.log('Existing sections (for current subject):', existingSections);
     console.log('Starting section index:', startingIndex);
     
     // Generate columns based on count
@@ -841,7 +845,7 @@ function checkSectionConflict(index) {
         });
     }
     
-    // 2. Check for room-time conflicts with existing schedules (same subject)
+    // 2. Check for room-time conflicts with existing schedules
     for (const [key, schedule] of Object.entries(existingSchedules)) {
         if (schedule.semester === semester && schedule.yearId == academicYear) {
             // Check if same room
@@ -856,6 +860,21 @@ function checkSectionConflict(index) {
                             message: `<strong>${schedule.subjectCode} - Section ${schedule.section}</strong><br><span class="text-red-600">Room ${roomText.split(' - ')[0]} is occupied</span><br><span class="text-xs text-gray-600">${schedule.dayPattern} ${formatTimeAMPM(schedule.startTime)}-${formatTimeAMPM(schedule.endTime)}</span><br><span class="text-xs text-blue-600 italic">💡 Note: May be from another department</span>`
                         });
                         break;
+                    }
+                }
+            }
+            
+            // Check for block sectioning conflict (same section, same time, different subject)
+            if (schedule.section === section && schedule.subjectId != subjectId) {
+                // Check if days overlap
+                if (daysOverlap(dayPattern, schedule.dayPattern)) {
+                    // Check if times overlap
+                    if (timesOverlap(startTime, endTime, schedule.startTime, schedule.endTime)) {
+                        hasConflict = true;
+                        conflictDetails.push({
+                            type: 'block_sectioning',
+                            message: `<strong>${schedule.subjectCode} - Section ${schedule.section}</strong><br><span class="text-red-600">⚠️ BLOCK SECTIONING CONFLICT: Section ${section} students cannot attend both classes</span><br><span class="text-xs text-gray-600">${schedule.dayPattern} ${formatTimeAMPM(schedule.startTime)}-${formatTimeAMPM(schedule.endTime)}</span>`
+                        });
                     }
                 }
             }
@@ -934,6 +953,17 @@ function checkSectionConflict(index) {
             conflictDetails.push({
                 type: 'room_form',
                 message: `<strong>${subjectCode} - Section ${otherSection}</strong><br><span class="text-red-600">Room ${otherRoomText.split(' - ')[0]} conflict with Section ${i + 1}</span><br><span class="text-xs text-gray-600">${otherDay} ${formatTimeAMPM(otherStart)}-${formatTimeAMPM(otherEnd)}</span>`
+            });
+        }
+        
+        // Check block sectioning conflict (same section, different subjects, same time)
+        // Students in the same section cannot attend both classes
+        if (section === otherSection && daysOverlap(dayPattern, otherDay) && timesOverlap(startTime, endTime, otherStart, otherEnd)) {
+            console.log(`CONFLICT: Block sectioning conflict detected!`);
+            hasConflict = true;
+            conflictDetails.push({
+                type: 'block_sectioning',
+                message: `<strong>${subjectCode} - Section ${section}</strong><br><span class="text-red-600">⚠️ BLOCK SECTIONING: Section ${section} students cannot attend both classes at the same time</span><br><span class="text-xs text-gray-600">${dayPattern} ${formatTimeAMPM(startTime)}-${formatTimeAMPM(endTime)}</span>`
             });
         }
     }
@@ -1082,6 +1112,7 @@ function updateSubjectInfo() {
 function fetchExistingSections(subjectId) {
     console.log('=== FETCHING EXISTING SECTIONS ===');
     console.log('Subject ID:', subjectId);
+    currentSubjectId = subjectId; // Store the current subject ID
     
     const isDepartmentHead = {{ isDepartmentHead is defined and isDepartmentHead ? 'true' : 'false' }};
     const url = isDepartmentHead 
@@ -1174,12 +1205,14 @@ function updateExistingSectionsDisplay() {
         return;
     }
     
-    // If semester and year are not selected, show all sections
+    // If semester and year are not selected, show all sections for current subject only
     if (!semester || !academicYear) {
-        // Show all unique sections
+        // Show all unique sections for the current subject only
         const allSections = new Set();
         Object.values(existingSchedules).forEach(schedule => {
-            allSections.add(schedule.section);
+            if (schedule.subjectId == currentSubjectId) {
+                allSections.add(schedule.section);
+            }
         });
         
         console.log('No filter - showing all sections:', Array.from(allSections));
@@ -1200,20 +1233,22 @@ function updateExistingSectionsDisplay() {
         return;
     }
     
-    // Filter sections for current semester and year
+    // Filter sections for current semester, year, AND subject
     const currentSections = [];
     Object.entries(existingSchedules).forEach(([key, schedule]) => {
         console.log('Checking schedule key:', key);
         console.log('  - schedule.semester:', schedule.semester, '(type:', typeof schedule.semester, ') vs', semester, '(type:', typeof semester, ')');
         console.log('  - schedule.yearId:', schedule.yearId, '(type:', typeof schedule.yearId, ') vs', academicYear, '(type:', typeof academicYear, ')');
+        console.log('  - schedule.subjectId:', schedule.subjectId, 'vs currentSubjectId:', currentSubjectId);
         
         // Use type-safe comparison: convert both to strings for comparison
         const semesterMatch = String(schedule.semester) === String(semester);
         const yearMatch = String(schedule.yearId) === String(academicYear);
+        const subjectMatch = schedule.subjectId == currentSubjectId;
         
-        console.log('  - semesterMatch:', semesterMatch, 'yearMatch:', yearMatch);
+        console.log('  - semesterMatch:', semesterMatch, 'yearMatch:', yearMatch, 'subjectMatch:', subjectMatch);
         
-        if (semesterMatch && yearMatch) {
+        if (semesterMatch && yearMatch && subjectMatch) {
             currentSections.push(schedule.section);
             console.log('  ✓ MATCHED - added section:', schedule.section);
         }
@@ -1255,7 +1290,9 @@ function updateExistingSectionsDisplay() {
 // Hide existing sections info
 function hideExistingSections() {
     document.getElementById('existing-sections-info').classList.add('hidden');
-    existingSchedules = {};
+    // DO NOT clear existingSchedules - we need it for conflict detection!
+    // Even if current subject has no sections, other subjects' schedules are needed
+    // for block sectioning conflict detection
 }
 
 // Check if section already exists (NOT USED in block sectioning mode)

@@ -129,8 +129,14 @@
                                 </div>
                             </div>
                             <div class="ml-3 flex-1">
-                                <p class="text-sm font-semibold">Invalid Credentials</p>
-                                <p class="text-xs text-red-600 mt-1">Please check your email and password and try again.</p>
+                                <p class="text-sm font-semibold">
+                                    {% if 'deactivated' in error.messageKey|lower or 'deactivated' in error.message|lower %}
+                                        Account Deactivated
+                                    {% else %}
+                                        Invalid Credentials
+                                    {% endif %}
+                                </p>
+                                <p class="text-xs text-red-600 mt-1">{{ error.messageKey|trans(error.messageData, 'security') }}</p>
                             </div>
                         </div>
                     </div>

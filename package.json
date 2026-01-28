@@ -2,6 +2,7 @@
   "name": "smart-scheduling-system",
   "version": "1.0.0",
   "description": "Smart Scheduling System with Tailwind CSS",
+  "author": "Genderson Vergara",
   "scripts": {
     "build": "tailwindcss -i ./assets/styles/app.css -o ./public/build/app.css --watch",
     "build-prod": "tailwindcss -i ./assets/styles/app.css -o ./public/build/app.css --minify",

@@ -213,59 +213,16 @@
     }
     
     /* Default hide print-only elements */
-    .print-only {
-        display: none;
-    }
-    
-    .print-header {
-        display: none;
+    .print-only,
+    .print-header,
+    .print-stats {
+        display: none !important;
     }
 </style>
 {% endblock %}
 
 {% block main_content %}
 <div class="p-6 lg:p-8">
-    <!-- Print Header (Only visible when printing) -->
-    <div class="print-header print-only">
-        <h1>Faculty Workload Report</h1>
-        <div class="subtitle">{{ dashboard_data.department.name }}</div>
-        <div class="meta">
-            {% if selected_academic_year and selected_semester %}
-                {% for year in academic_years %}
-                    {% if year.id == selected_academic_year %}
-                        Academic Year: {{ year.year }} | Semester: {{ selected_semester }}
-                    {% endif %}
-                {% endfor %}
-            {% endif %}
-            | Generated: {{ "now"|date("F d, Y g:i A") }}
-        </div>
-    </div>
-
-    <!-- Print Statistics Summary (Only visible when printing) -->
-    <div class="print-stats print-only">
-        <div class="stat-card">
-            <div class="stat-label">TOTAL FACULTY</div>
-            <div class="stat-value">{{ statistics.total_faculty }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">OVERLOADED</div>
-            <div class="stat-value" style="color: #dc2626;">{{ statistics.overloaded }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">OPTIMAL</div>
-            <div class="stat-value" style="color: #059669;">{{ statistics.optimal }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">UNDERLOADED</div>
-            <div class="stat-value" style="color: #d97706;">{{ statistics.underloaded }}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">AVG LOAD</div>
-            <div class="stat-value">{{ statistics.average_load }}</div>
-            <div class="stat-unit">units</div>
-        </div>
-    </div>
-
     <!-- Page Header -->
     <div class="mb-8 screen-only">
         <div class="flex items-center justify-between">

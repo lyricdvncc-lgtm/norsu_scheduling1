@@ -11,7 +11,7 @@ class HomeController extends AbstractController
     #[Route('/', name: 'app_home')]
     public function index(): Response
     {
-        // Redirect authenticated users to their appropriate dashboard
+        // Redirect authenticated users to their appropriate dashboard based on role hierarchy
         if ($this->isGranted('ROLE_ADMIN')) {
             return $this->redirectToRoute('admin_dashboard');
         }
@@ -24,7 +24,16 @@ class HomeController extends AbstractController
             return $this->redirectToRoute('faculty_dashboard');
         }
         
-        // Fallback for other authenticated users
+        // For authenticated users without proper roles, show a message
+        if ($this->isGranted('IS_AUTHENTICATED_FULLY')) {
+            /** @var \App\Entity\User $user */
+            $user = $this->getUser();
+            if ($user && ($user->getRole() === null || !in_array($user->getRole(), [1, 2, 3]))) {
+                $this->addFlash('error', 'Your account does not have a valid role assigned. Please contact the administrator to assign a role to your account.');
+            }
+        }
+        
+        // Fallback for other authenticated users or guests
         return $this->render('home/index.html.twig', [
             'page_title' => 'Welcome to Smart Scheduling System'
         ]);

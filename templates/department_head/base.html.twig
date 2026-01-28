@@ -241,6 +241,12 @@
                                 </svg>
                                 Faculty Workload
                             </a>
+                            <a href="{{ path('department_head_reports_history') }}" class="nav-item {% if app.request.get('_route') starts with 'department_head_reports_history' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'department_head_reports_history') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                <svg class="{% if app.request.get('_route') starts with 'department_head_reports_history' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                History & Reports
+                            </a>
                             <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
                                 <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
@@ -248,15 +254,6 @@
                                 </svg>
                                 <span class="flex items-center justify-between flex-1">
                                     Room Utilization
-                                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
-                                </span>
-                            </a>
-                            <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
-                                <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                                </svg>
-                                <span class="flex items-center justify-between flex-1">
-                                    Department Reports
                                     <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
                                 </span>
                             </a>
@@ -375,6 +372,12 @@
                                     </svg>
                                     Faculty Workload
                                 </a>
+                                <a href="{{ path('department_head_reports_history') }}" class="nav-item {% if app.request.get('_route') starts with 'department_head_reports_history' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'department_head_reports_history') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                    <svg class="{% if app.request.get('_route') starts with 'department_head_reports_history' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    History & Reports
+                                </a>
                                 <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
                                     <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
@@ -382,15 +385,6 @@
                                     </svg>
                                     <span class="flex items-center justify-between flex-1">
                                         Room Utilization
-                                        <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
-                                    </span>
-                                </a>
-                                <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
-                                    <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                                    </svg>
-                                    <span class="flex items-center justify-between flex-1">
-                                        Department Reports
                                         <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
                                     </span>
                                 </a>

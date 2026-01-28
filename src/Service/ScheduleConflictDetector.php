@@ -368,7 +368,7 @@ class ScheduleConflictDetector
                         $existing->getDayPattern(),
                         $existing->getStartTime()->format('g:i A'),
                         $existing->getEndTime()->format('g:i A'),
-                        $existing->getFaculty() ? $existing->getFaculty()->getName() : 'Unassigned',
+                        $existing->getFaculty() ? $existing->getFaculty()->getFullName() : 'Unassigned',
                         $existing->getRoom() ? $existing->getRoom()->getName() : 'Unassigned'
                     )
                 ];

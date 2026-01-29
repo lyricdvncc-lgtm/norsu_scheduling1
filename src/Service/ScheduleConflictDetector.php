@@ -362,23 +362,6 @@ class ScheduleConflictDetector
             if ($this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern())
                 && $this->hasTimeOverlap($schedule, $existing)) {
                 
-                // Get year level for both schedules - they should be the same by query design
-                $existingYearLevel = 'Unknown';
-                if ($existing->getCurriculumSubject() && $existing->getCurriculumSubject()->getCurriculumTerm()) {
-                    $existingYearLevel = $existing->getCurriculumSubject()->getCurriculumTerm()->getYearLevel();
-                }
-                
-                // SAFETY CHECK: This should never happen due to our query filter,
-                // but if year levels don't match, skip this conflict
-                if ($existingYearLevel !== $yearLevel) {
-                    error_log(sprintf(
-                        "[Block Sectioning Debug] SKIPPING conflict - Year levels don't match: %s vs %s",
-                        $yearLevel,
-                        $existingYearLevel
-                    ));
-                    continue; // Different year levels - not a real conflict
-                }
-                
                 error_log(sprintf(
                     "[Block Sectioning Debug] CONFLICT FOUND: %s vs %s (both Year %s)",
                     $schedule->getSubject()->getCode(),

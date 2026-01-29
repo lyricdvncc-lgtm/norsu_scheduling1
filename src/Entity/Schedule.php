@@ -38,10 +38,6 @@ class Schedule
     #[ORM\JoinColumn(name: 'faculty_id', referencedColumnName: 'id', nullable: true)]
     private ?User $faculty = null;
 
-    #[ORM\ManyToOne(targetEntity: CurriculumSubject::class)]
-    #[ORM\JoinColumn(name: 'curriculum_subject_id', referencedColumnName: 'id', nullable: true)]
-    private ?CurriculumSubject $curriculumSubject = null;
-
     #[ORM\Column(name: 'day_pattern', type: Types::STRING, length: 255, nullable: true)]
     private ?string $dayPattern = null;
 
@@ -185,17 +181,6 @@ class Schedule
     public function setFaculty(?User $faculty): self
     {
         $this->faculty = $faculty;
-        return $this;
-    }
-
-    public function getCurriculumSubject(): ?CurriculumSubject
-    {
-        return $this->curriculumSubject;
-    }
-
-    public function setCurriculumSubject(?CurriculumSubject $curriculumSubject): self
-    {
-        $this->curriculumSubject = $curriculumSubject;
         return $this;
     }
 

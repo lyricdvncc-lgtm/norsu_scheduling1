@@ -103,7 +103,8 @@ class ScheduleController extends AbstractController
             );
         }
 
-        // Detect conflicts for each schedule
+        // Detect conflicts for each schedule and store conflict details
+        $scheduleConflicts = [];
         foreach ($schedules as $schedule) {
             // detectConflicts checks room-time conflicts and section conflicts
             // Pass true to exclude the schedule itself from conflict detection
@@ -112,9 +113,17 @@ class ScheduleController extends AbstractController
             // Check duplicate subject-section (also exclude self)
             $duplicateConflicts = $conflictDetector->checkDuplicateSubjectSection($schedule, true);
             
+            // Merge all conflicts
+            $allConflicts = array_merge($conflicts, $duplicateConflicts);
+            
             // Mark as conflicted if any hard conflicts exist
-            $hasConflict = !empty($conflicts) || !empty($duplicateConflicts);
+            $hasConflict = !empty($allConflicts);
             $schedule->setIsConflicted($hasConflict);
+            
+            // Store conflict details for template access
+            if ($hasConflict) {
+                $scheduleConflicts[$schedule->getId()] = $allConflicts;
+            }
         }
 
         // Get filter options
@@ -158,6 +167,7 @@ class ScheduleController extends AbstractController
             'activeSemesterDisplay' => $this->systemSettingsService->getActiveSemesterDisplay(),
             'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
             'dashboard_data' => $this->dashboardService->getAdminDashboardData(),
+            'scheduleConflicts' => $scheduleConflicts,
         ]);
     }
 
@@ -804,16 +814,19 @@ class ScheduleController extends AbstractController
     public function getExistingSections(int $subjectId): JsonResponse
     {
         try {
-            // Get all active schedules for this subject WITH year level data
+            // Get all active schedules for this subject WITH year level data FROM CURRICULUM
             $schedules = $this->scheduleRepository->createQueryBuilder('s')
                 ->select('s.section', 's.semester', 's.dayPattern', 
                          's.startTime', 's.endTime',
                          'r.id as roomId', 'r.code as roomCode',
                          'sub.code as subjectCode', 'sub.id as subjectId',
-                         'ay.year', 'ay.id as yearId')
+                         'ay.year', 'ay.id as yearId',
+                         'ct.year_level as yearLevel')
                 ->leftJoin('s.academicYear', 'ay')
                 ->leftJoin('s.room', 'r')
                 ->leftJoin('s.subject', 'sub')
+                ->leftJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = sub.id')
+                ->leftJoin('cs.curriculumTerm', 'ct')
                 ->where('s.subject = :subjectId')
                 ->andWhere('s.status = :status')
                 ->setParameter('subjectId', $subjectId)
@@ -828,10 +841,13 @@ class ScheduleController extends AbstractController
                          's.startTime', 's.endTime',
                          'r.id as roomId', 'r.code as roomCode',
                          'sub.code as subjectCode', 'sub.id as subjectId',
-                         'ay.year', 'ay.id as yearId')
+                         'ay.year', 'ay.id as yearId',
+                         'ct.year_level as yearLevel')
                 ->leftJoin('s.academicYear', 'ay')
                 ->leftJoin('s.room', 'r')
                 ->leftJoin('s.subject', 'sub')
+                ->leftJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = sub.id')
+                ->leftJoin('cs.curriculumTerm', 'ct')
                 ->where('s.subject != :subjectId')
                 ->andWhere('s.status = :status')
                 ->setParameter('subjectId', $subjectId)

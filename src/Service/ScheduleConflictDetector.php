@@ -78,17 +78,18 @@ class ScheduleConflictDetector
             }
         }
 
-        // Check for subject-section conflicts (same subject and section at same time)
+        // Check for subject-section conflicts (includes both duplicate detection and block sectioning)
+        // - Duplicate detection: Same subject, same section scheduled multiple times
+        // - Block sectioning: Different subjects, same section, same year level (cross-subject conflicts)
         if ($schedule->getSection()) {
             $sectionConflicts = $this->checkSectionConflicts($schedule, $excludeSelf);
             $conflicts = array_merge($conflicts, $sectionConflicts);
         }
 
-        // Check for block sectioning conflicts (same year level and section at same time)
-        // Works with or without curriculum data (fallback mode available)
-        if ($schedule->getSection()) {
-            $blockSectionConflicts = $this->checkBlockSectioningConflicts($schedule, $excludeSelf);
-            $conflicts = array_merge($conflicts, $blockSectionConflicts);
+        // Check for faculty conflicts (same faculty teaching at same time)
+        if ($schedule->getFaculty()) {
+            $facultyConflicts = $this->checkFacultyConflicts($schedule, $excludeSelf);
+            $conflicts = array_merge($conflicts, $facultyConflicts);
         }
 
         return $conflicts;
@@ -216,25 +217,27 @@ class ScheduleConflictDetector
 
         return array_unique($days);
     }
+
     /**
-     * Check if same section is scheduled for multiple subjects at the same time
+     * Check for faculty conflicts
+     * Faculty cannot teach two different classes at the same time
      */
-    private function checkSectionConflicts(Schedule $schedule, bool $excludeSelf = false): array
+    private function checkFacultyConflicts(Schedule $schedule, bool $excludeSelf = false): array
     {
         $conflicts = [];
 
-        // Check if the SAME subject and section is scheduled at the same time
-        // (Section A of ITS 100 is different from Section A of ITS 101)
+        if (!$schedule->getFaculty()) {
+            return $conflicts;
+        }
+
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('s')
             ->from(Schedule::class, 's')
-            ->where('s.section = :section')
-            ->andWhere('s.subject = :subject')
+            ->where('s.faculty = :faculty')
             ->andWhere('s.academicYear = :academicYear')
             ->andWhere('s.semester = :semester')
             ->andWhere('s.status = :status')
-            ->setParameter('section', $schedule->getSection())
-            ->setParameter('subject', $schedule->getSubject())
+            ->setParameter('faculty', $schedule->getFaculty())
             ->setParameter('academicYear', $schedule->getAcademicYear())
             ->setParameter('semester', $schedule->getSemester())
             ->setParameter('status', 'active');
@@ -251,18 +254,157 @@ class ScheduleConflictDetector
             if ($this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern())
                 && $this->hasTimeOverlap($schedule, $existing)) {
                 $conflicts[] = [
-                    'type' => 'section_conflict',
+                    'type' => 'faculty_conflict',
                     'schedule' => $existing,
                     'message' => sprintf(
-                        'Section %s is already scheduled for %s (%s) from %s to %s in Room %s',
-                        $existing->getSection(),
+                        'Faculty %s is already teaching %s (Section %s) on %s from %s to %s in Room %s',
+                        $existing->getFaculty()->getFullName(),
                         $existing->getSubject()->getCode(),
+                        $existing->getSection() ?? 'N/A',
                         $existing->getDayPattern(),
                         $existing->getStartTime()->format('g:i A'),
                         $existing->getEndTime()->format('g:i A'),
                         $existing->getRoom()->getName()
                     )
                 ];
+            }
+        }
+
+        return $conflicts;
+    }
+
+    /**
+     * Check for section conflicts - detects when the same section is scheduled at the same time
+     * This includes both:
+     * 1. Duplicate detection: Same subject and section scheduled multiple times
+     * 2. Cross-subject conflicts: Different subjects, same section (if same year level)
+     */
+    private function checkSectionConflicts(Schedule $schedule, bool $excludeSelf = false): array
+    {
+        $conflicts = [];
+
+        if (!$schedule->getSection() || !$schedule->getSubject()) {
+            return $conflicts;
+        }
+
+        $subject = $schedule->getSubject();
+        $section = $schedule->getSection();
+        
+        // Get department for filtering
+        $department = $subject->getDepartment();
+        if (!$department) {
+            error_log("[Section Conflict Debug] No department found for subject - skipping conflict check");
+            return $conflicts;
+        }
+
+        // Automatically look up year level from curriculum
+        $yearLevel = $this->getYearLevelFromCurriculum($subject, $schedule->getSemester());
+        
+        // Find all schedules with the SAME section in the SAME academic year and semester
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('s')
+            ->from(Schedule::class, 's')
+            ->innerJoin('s.subject', 'subj')
+            ->where('s.section = :section')
+            ->andWhere('subj.department = :department')   // CRITICAL: Must be same department
+            ->andWhere('s.academicYear = :academicYear')
+            ->andWhere('s.semester = :semester')
+            ->andWhere('s.status = :status')
+            ->setParameter('section', $section)
+            ->setParameter('department', $department)
+            ->setParameter('academicYear', $schedule->getAcademicYear())
+            ->setParameter('semester', $schedule->getSemester())
+            ->setParameter('status', 'active');
+
+        if ($excludeSelf && $schedule->getId()) {
+            $qb->andWhere('s.id != :scheduleId')
+                ->setParameter('scheduleId', $schedule->getId());
+        }
+
+        $existingSchedules = $qb->getQuery()->getResult();
+
+        error_log(sprintf(
+            "[Section Conflict Debug] Checking %s (Dept: %s, Year %s, Section %s) - Found %d existing schedules",
+            $subject->getCode(),
+            $department->getName(),
+            $yearLevel ?: 'NULL',
+            $section,
+            count($existingSchedules)
+        ));
+
+        foreach ($existingSchedules as $existing) {
+            $existingSubject = $existing->getSubject();
+            $isSameSubject = ($existingSubject->getId() === $subject->getId());
+            
+            // Automatically look up year level for the existing schedule's subject
+            $existingYearLevel = $this->getYearLevelFromCurriculum($existingSubject, $existing->getSemester());
+            
+            error_log(sprintf(
+                "[Section Conflict Debug] Comparing with %s (Year %s, Section %s, Days: %s vs %s, Time: %s-%s vs %s-%s)",
+                $existingSubject->getCode(),
+                $existingYearLevel ?: 'NULL',
+                $existing->getSection(),
+                $schedule->getDayPattern(),
+                $existing->getDayPattern(),
+                $schedule->getStartTime()->format('H:i'),
+                $schedule->getEndTime()->format('H:i'),
+                $existing->getStartTime()->format('H:i'),
+                $existing->getEndTime()->format('H:i')
+            ));
+
+            // For SAME subject: Always check conflict (duplicate detection)
+            // For DIFFERENT subjects: Only check if both have year level data AND they match
+            $shouldCheck = $isSameSubject || 
+                          ($yearLevel && $existingYearLevel && $yearLevel === $existingYearLevel);
+            
+            if (!$shouldCheck) {
+                error_log("[Section Conflict Debug] Skipping - different subjects with no matching year level");
+                continue;
+            }
+
+            // Check if day patterns overlap AND times overlap
+            if ($this->hasDayOverlap($schedule->getDayPattern(), $existing->getDayPattern())
+                && $this->hasTimeOverlap($schedule, $existing)) {
+                
+                if ($isSameSubject) {
+                    error_log("[Section Conflict Debug] DUPLICATE FOUND!");
+                    $conflicts[] = [
+                        'type' => 'section_conflict',
+                        'schedule' => $existing,
+                        'message' => sprintf(
+                            'DUPLICATE: Section %s is already scheduled for %s (%s) from %s to %s in Room %s',
+                            $section,
+                            $existingSubject->getCode(),
+                            $existing->getDayPattern(),
+                            $existing->getStartTime()->format('g:i A'),
+                            $existing->getEndTime()->format('g:i A'),
+                            $existing->getRoom()->getName()
+                        )
+                    ];
+                } else {
+                    error_log(sprintf(
+                        "[Section Conflict Debug] CROSS-SUBJECT CONFLICT FOUND: %s vs %s (both Year %s)",
+                        $subject->getCode(),
+                        $existingSubject->getCode(),
+                        $yearLevel
+                    ));
+                    $conflicts[] = [
+                        'type' => 'section_conflict',
+                        'schedule' => $existing,
+                        'message' => sprintf(
+                            'SECTION CONFLICT: Year %s Section %s students cannot attend both %s and %s at the same time (%s, %s - %s). Faculty: %s, Room: %s',
+                            $yearLevel,
+                            $section,
+                            $subject->getCode(),
+                            $existingSubject->getCode(),
+                            $existing->getDayPattern(),
+                            $existing->getStartTime()->format('g:i A'),
+                            $existing->getEndTime()->format('g:i A'),
+                            $existing->getFaculty() ? $existing->getFaculty()->getFullName() : 'Unassigned',
+                            $existing->getRoom() ? $existing->getRoom()->getName() : 'Unassigned'
+                        )
+                    ];
+                }
             }
         }
 

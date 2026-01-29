@@ -112,7 +112,7 @@
                                         {{ schedule.subject.code }} - {{ schedule.subject.title }}
                                     </h3>
                                     <p class="text-sm text-gray-600 mt-1">
-                                        {{ schedule.curriculumSubject and schedule.curriculumSubject.curriculum ? schedule.curriculumSubject.curriculum.name : 'N/A' }}
+                                        {{ schedule.subject.department ? schedule.subject.department.name : 'N/A' }}
                                     </p>
                                     <div class="mt-3 flex flex-wrap gap-4 text-sm text-gray-600">
                                         <span class="flex items-center">

@@ -851,113 +851,37 @@ document.addEventListener('keydown', function(e) {
                                         <span class="font-semibold">Faculty:</span> {{ schedule.faculty.firstName }} {{ schedule.faculty.lastName }}
                                     </div>
                                     {% endif %}
-                                    {% if schedule.curriculumSubject %}
-                                    <div class="text-sm text-gray-600 mb-3">
-                                        <span class="font-semibold">Year Level:</span> Year {{ schedule.curriculumSubject.curriculumTerm.yearLevel }} | 
-                                        <span class="font-semibold">Department:</span> {{ schedule.subject.department.name }}
-                                    </div>
-                                    {% endif %}
                                     
-                                    {# Find what this schedule conflicts with #}
-                                    {% set conflictsWith = [] %}
-                                    {% for otherSchedule in schedules %}
-                                        {% if otherSchedule.id != schedule.id and otherSchedule.status == 'active' %}
-                                            {# Check room-time conflict #}
-                                            {% set sameRoom = otherSchedule.room.id == schedule.room.id %}
-                                            {% set timeOverlap = (otherSchedule.startTime < schedule.endTime and otherSchedule.endTime > schedule.startTime) %}
-                                            {% set dayOverlap = false %}
-                                            {# Split day patterns and compare individual days #}
-                                            {% set scheduleDays = schedule.dayPattern|split('-') %}
-                                            {% set otherDays = otherSchedule.dayPattern|split('-') %}
-                                            {% for day in scheduleDays %}
-                                                {% if day in otherDays %}
-                                                    {% set dayOverlap = true %}
-                                                {% endif %}
-                                            {% endfor %}
-                                            {% set roomTimeConflict = sameRoom and timeOverlap and dayOverlap %}
-                                            
-                                            {# Check faculty conflict #}
-                                            {% set sameFaculty = schedule.faculty and otherSchedule.faculty and otherSchedule.faculty.id == schedule.faculty.id %}
-                                            {% set facultyConflict = sameFaculty and timeOverlap and dayOverlap %}
-                                            
-                                            {# Check block sectioning conflict (same year, section, time) #}
-                                            {% set blockConflict = false %}
-                                            {% if schedule.curriculumSubject and otherSchedule.curriculumSubject %}
-                                                {% set sameYear = schedule.curriculumSubject.curriculumTerm.yearLevel == otherSchedule.curriculumSubject.curriculumTerm.yearLevel %}
-                                                {% set sameSection = schedule.section == otherSchedule.section %}
-                                                {% set sameDept = schedule.subject.department.id == otherSchedule.subject.department.id %}
-                                                {% set blockConflict = sameYear and sameSection and timeOverlap and dayOverlap and sameDept %}
-                                            {% endif %}
-                                            
-                                            {% if roomTimeConflict or facultyConflict or blockConflict %}
-                                                {% set conflictType = [] %}
-                                                {% if roomTimeConflict %}
-                                                    {% set conflictType = conflictType|merge(['Room']) %}
-                                                {% endif %}
-                                                {% if facultyConflict %}
-                                                    {% set conflictType = conflictType|merge(['Faculty']) %}
-                                                {% endif %}
-                                                {% if blockConflict %}
-                                                    {% set conflictType = conflictType|merge(['Block Section']) %}
-                                                {% endif %}
-                                                {% set conflictsWith = conflictsWith|merge([{
-                                                    'schedule': otherSchedule,
-                                                    'types': conflictType
-                                                }]) %}
-                                            {% endif %}
-                                        {% endif %}
-                                    {% endfor %}
+                                    {# Get conflict details from server-side detection #}
+                                    {% set conflicts = scheduleConflicts[schedule.id] ?? [] %}
                                     
-                                    {% if conflictsWith|length > 0 %}
+                                    {% if conflicts|length > 0 %}
                                         <div class="mt-3 pt-3 border-t border-orange-300">
                                             <p class="text-sm font-semibold text-red-700 mb-2 flex items-center">
                                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                                 </svg>
-                                                {{ conflictsWith|length }} Conflict(s):
+                                                {{ conflicts|length }} Conflict(s):
                                             </p>
                                             <div class="space-y-2 pl-5">
-                                                {% for conflict in conflictsWith %}
+                                                {% for conflict in conflicts %}
                                                     <div class="bg-white rounded-lg p-3 border border-red-200">
                                                         <div class="flex items-start justify-between gap-3">
                                                             <div class="flex-1 min-w-0">
                                                                 <div class="flex items-center gap-2 mb-2 flex-wrap">
-                                                                    {% for type in conflict.types %}
-                                                                        <span class="px-2 py-0.5 bg-red-600 text-white text-xs font-semibold rounded">{{ type }}</span>
-                                                                    {% endfor %}
+                                                                    {% set conflictType = conflict.type|replace({'_': ' '})|title %}
+                                                                    <span class="px-2 py-0.5 bg-red-600 text-white text-xs font-semibold rounded">{{ conflictType }}</span>
                                                                 </div>
-                                                                {% if 'Room' in conflict.types %}
-                                                                    <p class="text-sm text-gray-800 mb-1">
-                                                                        Room <span class="font-semibold">{{ conflict.schedule.room.code }}</span> is already booked for 
-                                                                        <span class="font-semibold">{{ conflict.schedule.subject.code }}</span> 
-                                                                        ({{ conflict.schedule.dayPattern }}) from 
-                                                                        <span class="font-semibold">{{ conflict.schedule.startTime|date('g:i A') }} - {{ conflict.schedule.endTime|date('g:i A') }}</span> 
-                                                                        (Section: {{ conflict.schedule.section }})
-                                                                    </p>
-                                                                {% endif %}
-                                                                {% if 'Faculty' in conflict.types %}
-                                                                    <p class="text-sm text-gray-800 mb-1">
-                                                                        Faculty <span class="font-semibold">{{ conflict.schedule.faculty.firstName }} {{ conflict.schedule.faculty.lastName }}</span> 
-                                                                        is already teaching <span class="font-semibold">{{ conflict.schedule.subject.code }}</span> 
-                                                                        ({{ conflict.schedule.dayPattern }}, {{ conflict.schedule.startTime|date('g:i A') }} - {{ conflict.schedule.endTime|date('g:i A') }})
-                                                                    </p>
-                                                                {% endif %}
-                                                                {% if 'Block Section' in conflict.types %}
-                                                                    <p class="text-sm text-gray-800 mb-1">
-                                                                        {% if conflict.schedule.curriculumSubject %}
-                                                                        Year {{ conflict.schedule.curriculumSubject.curriculumTerm.yearLevel }} Section {{ conflict.schedule.section }} students cannot attend both 
-                                                                        {% else %}
-                                                                        Section {{ conflict.schedule.section }} students cannot attend both 
-                                                                        {% endif %}
-                                                                        <span class="font-semibold">{{ schedule.subject.code }}</span> and <span class="font-semibold">{{ conflict.schedule.subject.code }}</span> 
-                                                                        at the same time ({{ conflict.schedule.dayPattern }}, {{ conflict.schedule.startTime|date('g:i A') }} - {{ conflict.schedule.endTime|date('g:i A') }})
-                                                                    </p>
-                                                                {% endif %}
+                                                                <p class="text-sm text-gray-800 mb-1">
+                                                                    {{ conflict.message|raw }}
+                                                                </p>
                                                             </div>
-                                                            <a href="{{ path('app_schedule_edit', {id: conflict.schedule.id}) }}" 
-                                                               class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors whitespace-nowrap flex-shrink-0">
-                                                                Edit
-                                                            </a>
+                                                            {% if conflict.schedule is defined and conflict.schedule.id is defined %}
+                                                                <a href="{{ path('app_schedule_edit', {id: conflict.schedule.id}) }}" 
+                                                                   class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors whitespace-nowrap flex-shrink-0">
+                                                                    Edit
+                                                                </a>
+                                                            {% endif %}
                                                         </div>
                                                     </div>
                                                 {% endfor %}

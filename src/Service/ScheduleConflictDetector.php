@@ -657,4 +657,4 @@ class ScheduleConflictDetector
             error_log("[Year Level Lookup] Error looking up year level for subject {$subject->getCode()}: {$e->getMessage()}");
             return null;
         }
-    }
+    }}

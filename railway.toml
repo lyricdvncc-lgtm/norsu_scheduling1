@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+watchPatterns = ["**/*.php", "composer.json", "composer.lock"]
+
+[deploy]
+startCommand = "php -S 0.0.0.0:$PORT -t public"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/"
+healthcheckTimeout = 100

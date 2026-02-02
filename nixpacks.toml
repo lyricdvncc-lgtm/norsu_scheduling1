@@ -1,5 +1,19 @@
+# Railway deployment configuration for Symfony
 [phases.setup]
-nixPkgs = ["php85", "php85Extensions.zip", "php85Extensions.pdo_mysql", "php85Extensions.gd", "php85Extensions.intl", "php85Extensions.opcache", "php85Extensions.mbstring"]
+nixPkgs = ["php85", "php85Extensions.zip", "php85Extensions.pdo_mysql", "php85Extensions.gd", "php85Extensions.intl", "php85Extensions.opcache", "php85Extensions.mbstring", "php85Extensions.exif", "php85Extensions.bcmath", "nginx"]
+
+[phases.install]
+cmds = [
+    "composer install --no-dev --optimize-autoloader --no-interaction --no-scripts"
+]
+
+[phases.build]
+cmds = [
+    "mkdir -p var/cache var/log var/sessions public/curriculum_templates",
+    "chmod -R 777 var/",
+    "php bin/console cache:clear --env=prod --no-debug || true",
+    "php bin/console cache:warmup --env=prod --no-debug || true"
+]
 
 [start]
 cmd = "php -S 0.0.0.0:$PORT -t public"

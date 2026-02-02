@@ -3,6 +3,6 @@ nixPkgs = ["php85", "php85Extensions.zip", "php85Extensions.pdo_mysql", "php85Ex
 
 [phases.install]
 cmds = ["composer install --optimize-autoloader --no-dev --no-scripts --no-interaction"]
-
+cmds = ["composer update"]
 [start]
 cmd = "php -S 0.0.0.0:$PORT -t public"

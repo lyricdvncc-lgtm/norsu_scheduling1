@@ -16,4 +16,4 @@ cmds = [
 ]
 
 [start]
-cmd = "php -S 0.0.0.0:$PORT -t public"
+cmd = "bash -c 'php -S 0.0.0.0:${PORT:-8000} -t public'"

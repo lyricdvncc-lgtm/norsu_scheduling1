@@ -34,6 +34,10 @@ COPY docker/nginx/default.conf /etc/nginx/sites-available/default
 # Copy supervisor configuration
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy startup script
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
 # Install PHP dependencies without running post-install scripts
 # Post-install scripts will run when container starts with actual .env file
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
@@ -47,8 +51,8 @@ RUN mkdir -p /var/www/html/var/cache /var/www/html/var/log /var/www/html/var/ses
 RUN mkdir -p /var/www/html/public/curriculum_templates \
     && chown -R www-data:www-data /var/www/html/public/curriculum_templates
 
-# Expose port 80
+# Expose port (will be overridden by Railway's PORT env var)
 EXPOSE 80
 
-# Start supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start using startup script that handles PORT env variable
+CMD ["/usr/local/bin/start.sh"]

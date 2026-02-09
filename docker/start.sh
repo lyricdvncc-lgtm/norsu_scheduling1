@@ -81,8 +81,9 @@ chown -R www-data:www-data /var/www/html/var
 chmod -R 775 /var/www/html/var
 
 # Run database migrations
-echo "Running database migrations..."
-php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration 2>&1 || true
+echo "Running database schema update..."
+php bin/console doctrine:schema:update --force --no-interaction 2>&1 || true
+php bin/console doctrine:migrations:version --add --all --no-interaction 2>&1 || true
 
 echo "Starting PHP-FPM and Nginx via Supervisor..."
 

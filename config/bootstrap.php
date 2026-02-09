@@ -13,8 +13,11 @@ if (is_array($env = @include dirname(__DIR__).'/.env.local.php') && (!isset($env
 } elseif (!class_exists(Dotenv::class)) {
     throw new RuntimeException('Please run "composer require symfony/dotenv" to load the ".env" files configuring the application.');
 } else {
-    // load all the .env files
-    (new Dotenv())->loadEnv(dirname(__DIR__).'/.env');
+    // load all the .env files (skip if file doesn't exist and env vars are set)
+    $envFile = dirname(__DIR__).'/.env';
+    if (file_exists($envFile)) {
+        (new Dotenv())->loadEnv($envFile);
+    }
 }
 
 // Set default timezone to Asia/Manila (Philippine Time)

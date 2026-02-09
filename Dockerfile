@@ -82,6 +82,9 @@ RUN mkdir -p var/cache var/log var/sessions public/curriculum_templates \
     && chown -R www-data:www-data var public/curriculum_templates \
     && chmod -R 775 var
 
+# Ensure .env exists (must be LAST to avoid being overwritten)
+RUN echo 'APP_ENV=prod' > .env && chown www-data:www-data .env
+
 # Expose port (overridden by Railway's PORT env var)
 EXPOSE 80
 

@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+# Ensure .env exists (Symfony requires it to boot)
+if [ ! -f /var/www/html/.env ]; then
+    echo "APP_ENV=${APP_ENV:-prod}" > /var/www/html/.env
+    echo "Created .env file with APP_ENV=${APP_ENV:-prod}"
+fi
+
 # Use PORT env variable or default to 80
 PORT=${PORT:-80}
 

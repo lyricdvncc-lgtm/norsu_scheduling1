@@ -9,8 +9,7 @@
     <!-- Tailwind CSS - Local -->
     <script src="{{ asset('vendor/js/tailwind.min.js') }}"></script>
     
-    <!-- Alpine.js for dropdown functionality - Local -->
-    <script defer src="{{ asset('vendor/js/alpine.min.js') }}"></script>
+    <!-- Alpine.js loaded after body scripts to ensure component functions are defined first -->
     
     <style>
         [x-cloak] {
@@ -695,5 +694,8 @@
 
     <!-- Include Profile Modal -->
     {% include 'components/profile_modal.html.twig' %}
+
+    <!-- Alpine.js loaded last to ensure all component functions are defined -->
+    <script src="{{ asset('vendor/js/alpine.min.js') }}"></script>
 </body>
 </html>

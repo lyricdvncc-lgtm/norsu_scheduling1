@@ -1,11 +1,20 @@
 # Dockerfile for Symfony Smart Scheduling System
+# Multi-stage build for smaller final image
+FROM composer:2 AS composer_stage
+
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --no-progress --prefer-dist
+
 FROM php:8.3-fpm
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies in a single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libzip-dev \
@@ -14,22 +23,42 @@ RUN apt-get update && apt-get install -y \
     unzip \
     nginx \
     supervisor \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache
+# Configure PHP OPcache for production
+RUN { \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=20000'; \
+    echo 'opcache.revalidate_freq=0'; \
+    echo 'opcache.validate_timestamps=0'; \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.enable_cli=0'; \
+    } > /usr/local/etc/php/conf.d/opcache.ini
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Configure PHP-FPM for production
+RUN { \
+    echo 'upload_max_filesize=50M'; \
+    echo 'post_max_size=50M'; \
+    echo 'memory_limit=256M'; \
+    echo 'max_execution_time=60'; \
+    echo 'date.timezone=Asia/Manila'; \
+    } > /usr/local/etc/php/conf.d/app.ini
+
+# Remove default nginx site
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY . .
+# Copy Composer dependencies from build stage
+COPY --from=composer_stage /app/vendor ./vendor
 
 # Copy nginx configuration
 COPY docker/nginx/default.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Copy supervisor configuration
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
@@ -38,21 +67,24 @@ COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-# Install PHP dependencies without running post-install scripts
-# Post-install scripts will run when container starts with actual .env file
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+# Copy application files (after vendor to leverage Docker cache)
+COPY . .
 
-# Set permissions for var directory and create cache
-RUN mkdir -p /var/www/html/var/cache /var/www/html/var/log /var/www/html/var/sessions \
-    && chown -R www-data:www-data /var/www/html/var \
-    && chmod -R 777 /var/www/html/var
+# Run Composer scripts now that we have the full source
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist \
+    || true
 
-# Create public directories if they don't exist
-RUN mkdir -p /var/www/html/public/curriculum_templates \
-    && chown -R www-data:www-data /var/www/html/public/curriculum_templates
+# Create required directories and set permissions
+RUN mkdir -p var/cache var/log var/sessions public/curriculum_templates \
+    && chown -R www-data:www-data var public/curriculum_templates \
+    && chmod -R 775 var
 
-# Expose port (will be overridden by Railway's PORT env var)
+# Expose port (overridden by Railway's PORT env var)
 EXPOSE 80
 
-# Start using startup script that handles PORT env variable
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Start using startup script
 CMD ["/usr/local/bin/start.sh"]

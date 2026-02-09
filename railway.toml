@@ -1,9 +1,10 @@
 [build]
-builder = "nixpacks"
-watchPatterns = ["**/*.php", "composer.json", "composer.lock"]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["**/*.php", "composer.json", "composer.lock", "templates/**", "config/**"]
 
 [deploy]
-startCommand = "bash -c 'php -S 0.0.0.0:${PORT:-8000} -t public'"
+startCommand = "/usr/local/bin/start.sh"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
 healthcheckPath = "/"

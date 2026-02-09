@@ -20,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    command: --default-authentication-plugin=mysql_native_password --innodb-buffer-pool-size=256M
 
   # PHP-FPM + Nginx service
   app:
@@ -31,15 +32,12 @@ services:
     working_dir: /var/www/html
     environment:
       - APP_ENV=${APP_ENV:-prod}
-      - APP_SECRET=${APP_SECRET}
+      - APP_SECRET=${APP_SECRET:-change_me_in_production}
       - DATABASE_URL=mysql://${MYSQL_USER:-symfony}:${MYSQL_PASSWORD:-symfony}@db:3306/${MYSQL_DATABASE:-smart_scheduling}?serverVersion=8.0.31
       - MAILER_DSN=${MAILER_DSN:-null://null}
+      - MESSENGER_TRANSPORT_DSN=doctrine://default
     ports:
       - "${APP_PORT:-8000}:80"
-    volumes:
-      - .:/var/www/html
-      - ./var:/var/www/html/var
-      - ./public/curriculum_templates:/var/www/html/public/curriculum_templates
     depends_on:
       db:
         condition: service_healthy

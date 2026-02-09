@@ -1,6 +1,6 @@
-# Railway deployment configuration for Symfony
+# Railway deployment configuration for Symfony (fallback if using nixpacks)
 [phases.setup]
-nixPkgs = ["php85", "php85Extensions.zip", "php85Extensions.pdo_mysql", "php85Extensions.gd", "php85Extensions.intl", "php85Extensions.opcache", "php85Extensions.mbstring", "php85Extensions.exif", "php85Extensions.bcmath", "nginx"]
+nixPkgs = ["php83", "php83Extensions.zip", "php83Extensions.pdo_mysql", "php83Extensions.gd", "php83Extensions.intl", "php83Extensions.opcache", "php83Extensions.mbstring", "php83Extensions.exif", "php83Extensions.bcmath", "nginx"]
 
 [phases.install]
 cmds = [
@@ -10,7 +10,7 @@ cmds = [
 [phases.build]
 cmds = [
     "mkdir -p var/cache var/log var/sessions public/curriculum_templates",
-    "chmod -R 777 var/",
+    "chmod -R 775 var/",
     "php bin/console cache:clear --env=prod --no-debug || true",
     "php bin/console cache:warmup --env=prod --no-debug || true"
 ]

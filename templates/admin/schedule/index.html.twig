@@ -796,7 +796,7 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- Conflicts Modal -->
-<div id="conflictsModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+<div id="conflictsModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         <!-- Modal Header -->
         <div class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4 flex items-center justify-between">
@@ -924,13 +924,17 @@ document.addEventListener('keydown', function(e) {
     function showConflictsModal() {
         const conflictCount = {{ conflictedCount }};
         if (conflictCount > 0) {
-            document.getElementById('conflictsModal').classList.remove('hidden');
+            const modal = document.getElementById('conflictsModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
             document.body.style.overflow = 'hidden';
         }
     }
 
     function closeConflictsModal() {
-        document.getElementById('conflictsModal').classList.add('hidden');
+        const modal = document.getElementById('conflictsModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
         document.body.style.overflow = '';
     }
 

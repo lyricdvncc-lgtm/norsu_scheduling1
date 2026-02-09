@@ -511,6 +511,49 @@ class DepartmentHeadController extends AbstractController
         $activeSemester = $this->systemSettingsService->getActiveSemester();
         
         // Get all academic years for filter dropdown
+        $years = $this->getHistoryYears();
+        
+        // Get department group IDs
+        $departmentIds = $this->getDepartmentGroupIds($department);
+        
+        // Load schedules and build data using helper methods
+        $schedules = $this->loadDepartmentSchedules($departmentIds);
+        $roomsData = $this->buildHistoryRoomsData($departmentIds, $schedules);
+        $facultyData = $this->buildHistoryFacultyData($departmentIds, $schedules);
+        $subjectsData = $this->buildHistorySubjectsData($departmentIds, $schedules);
+        
+        // Handle exports
+        if ($exportType === 'rooms-pdf') {
+            return $this->exportDepartmentRoomsPdf($roomsData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
+        } elseif ($exportType === 'faculty-pdf') {
+            return $this->exportDepartmentFacultyPdf($facultyData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
+        }
+        
+        // Create display string for active semester
+        $activeSemesterDisplay = $activeYear && $activeSemester 
+            ? $activeYear->getYear() . ' | ' . $activeSemester . ' Semester'
+            : null;
+        
+        return $this->render('department_head/reports/history.html.twig', array_merge($this->getBaseTemplateData(), [
+            'years' => $years,
+            'selectedYear' => '',
+            'selectedSemester' => '',
+            'searchTerm' => '',
+            'activeYear' => $activeYear,
+            'activeSemester' => $activeSemester,
+            'activeSemesterDisplay' => $activeSemesterDisplay,
+            'roomsData' => $roomsData,
+            'facultyData' => $facultyData,
+            'subjectsData' => $subjectsData,
+            'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
+        ]));
+    }
+
+    /**
+     * Get all academic years for history reports filter.
+     */
+    private function getHistoryYears(): array
+    {
         $academicYears = $this->entityManager->getRepository(\App\Entity\AcademicYear::class)
             ->createQueryBuilder('ay')
             ->select('ay.year')
@@ -518,9 +561,14 @@ class DepartmentHeadController extends AbstractController
             ->orderBy('ay.year', 'DESC')
             ->getQuery()
             ->getResult();
-        $years = array_column($academicYears, 'year');
-        
-        // Get department group IDs if exists
+        return array_column($academicYears, 'year');
+    }
+
+    /**
+     * Get department IDs including department group members.
+     */
+    private function getDepartmentGroupIds(\App\Entity\Department $department): array
+    {
         $departmentIds = [$department->getId()];
         if ($department->getDepartmentGroup()) {
             $departmentIds = $department->getDepartmentGroup()
@@ -528,8 +576,33 @@ class DepartmentHeadController extends AbstractController
                 ->map(fn($d) => $d->getId())
                 ->toArray();
         }
-        
-        // Load ALL rooms used by this department
+        return $departmentIds;
+    }
+
+    /**
+     * Load all schedules for departments.
+     * @return Schedule[]
+     */
+    private function loadDepartmentSchedules(array $departmentIds): array
+    {
+        return $this->entityManager->getRepository(Schedule::class)
+            ->createQueryBuilder('s')
+            ->select('s', 'r', 'sub', 'd', 'u')
+            ->leftJoin('s.room', 'r')
+            ->leftJoin('s.subject', 'sub')
+            ->leftJoin('sub.department', 'd')
+            ->leftJoin('s.faculty', 'u')
+            ->where('sub.department IN (:departmentIds)')
+            ->setParameter('departmentIds', $departmentIds)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Build rooms data for history reports.
+     */
+    private function buildHistoryRoomsData(array $departmentIds, array $schedules): array
+    {
         $rooms = $this->entityManager->getRepository(Room::class)
             ->createQueryBuilder('r')
             ->leftJoin(Schedule::class, 's', 'WITH', 's.room = r')
@@ -541,21 +614,7 @@ class DepartmentHeadController extends AbstractController
             ->addOrderBy('r.name', 'ASC')
             ->getQuery()
             ->getResult();
-        
-        // Load ALL schedules for this department
-        $schedules = $this->entityManager->getRepository(Schedule::class)
-            ->createQueryBuilder('s')
-            ->select('s', 'r', 'sub', 'd', 'u')
-            ->leftJoin('s.room', 'r')
-            ->leftJoin('s.subject', 'sub')
-            ->leftJoin('sub.department', 'd')
-            ->leftJoin('s.faculty', 'u')
-            ->where('sub.department IN (:departmentIds)')
-            ->setParameter('departmentIds', $departmentIds)
-            ->getQuery()
-            ->getResult();
-        
-        // Build room data
+
         $roomsData = [];
         foreach ($rooms as $room) {
             $roomSchedules = array_filter($schedules, fn($s) => $s->getRoom() && $s->getRoom()->getId() === $room->getId());
@@ -578,9 +637,15 @@ class DepartmentHeadController extends AbstractController
                 'semesters' => implode(', ', array_unique($roomSemesters))
             ];
         }
-        
-        // Load faculty from this department
-        $facultyQuery = $this->entityManager->getRepository(User::class)
+        return $roomsData;
+    }
+
+    /**
+     * Build faculty data for history reports.
+     */
+    private function buildHistoryFacultyData(array $departmentIds, array $schedules): array
+    {
+        $facultyResults = $this->entityManager->getRepository(User::class)
             ->createQueryBuilder('u')
             ->select('u', 'COUNT(s.id) as scheduleCount', 'SUM(sub.units) as totalUnits')
             ->leftJoin(Schedule::class, 's', 'WITH', 's.faculty = u')
@@ -593,11 +658,10 @@ class DepartmentHeadController extends AbstractController
             ->setParameter('departmentIds', $departmentIds)
             ->groupBy('u.id')
             ->orderBy('u.lastName', 'ASC')
-            ->addOrderBy('u.firstName', 'ASC');
-        
-        $facultyResults = $facultyQuery->getQuery()->getResult();
-        
-        // Build faculty data
+            ->addOrderBy('u.firstName', 'ASC')
+            ->getQuery()
+            ->getResult();
+
         $facultyData = [];
         foreach ($facultyResults as $result) {
             $faculty = $result[0];
@@ -605,7 +669,6 @@ class DepartmentHeadController extends AbstractController
             
             $facultyYears = [];
             $facultySemesters = [];
-            
             foreach ($facultySchedules as $schedule) {
                 if ($schedule->getAcademicYear()) {
                     $facultyYears[] = $schedule->getAcademicYear();
@@ -623,8 +686,14 @@ class DepartmentHeadController extends AbstractController
                 'semesters' => implode(', ', array_unique($facultySemesters))
             ];
         }
-        
-        // Load subjects from this department
+        return $facultyData;
+    }
+
+    /**
+     * Build subjects data for history reports.
+     */
+    private function buildHistorySubjectsData(array $departmentIds, array $schedules): array
+    {
         $subjects = $this->entityManager->getRepository(\App\Entity\Subject::class)
             ->createQueryBuilder('sub')
             ->leftJoin('sub.department', 'd')
@@ -634,8 +703,7 @@ class DepartmentHeadController extends AbstractController
             ->orderBy('sub.code', 'ASC')
             ->getQuery()
             ->getResult();
-        
-        // Build subjects data
+
         $subjectsData = [];
         foreach ($subjects as $subject) {
             $subjectSchedules = array_filter($schedules, fn($s) => $s->getSubject() && $s->getSubject()->getId() === $subject->getId());
@@ -672,32 +740,7 @@ class DepartmentHeadController extends AbstractController
                 'semestersList' => array_values(array_unique($subjectSemesters))
             ];
         }
-        
-        // Handle exports (will implement PDF export methods later)
-        if ($exportType === 'rooms-pdf') {
-            return $this->exportDepartmentRoomsPdf($roomsData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
-        } elseif ($exportType === 'faculty-pdf') {
-            return $this->exportDepartmentFacultyPdf($facultyData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
-        }
-        
-        // Create display string for active semester
-        $activeSemesterDisplay = $activeYear && $activeSemester 
-            ? $activeYear->getYear() . ' | ' . $activeSemester . ' Semester'
-            : null;
-        
-        return $this->render('department_head/reports/history.html.twig', array_merge($this->getBaseTemplateData(), [
-            'years' => $years,
-            'selectedYear' => '',
-            'selectedSemester' => '',
-            'searchTerm' => '',
-            'activeYear' => $activeYear,
-            'activeSemester' => $activeSemester,
-            'activeSemesterDisplay' => $activeSemesterDisplay,
-            'roomsData' => $roomsData,
-            'facultyData' => $facultyData,
-            'subjectsData' => $subjectsData,
-            'hasActiveSemester' => $this->systemSettingsService->hasActiveSemester(),
-        ]));
+        return $subjectsData;
     }
 
     private function exportDepartmentRoomsPdf(array $roomsData, ?string $year, ?string $semester, string $departmentName, ?string $searchTerm): Response

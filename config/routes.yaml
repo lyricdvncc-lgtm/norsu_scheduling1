@@ -4,9 +4,4 @@ controllers:
         namespace: App\Controller
     type: attribute
 
-# Health check endpoint for deployment platforms
-health_check:
-    path: /health
-    controller: Symfony\Bundle\FrameworkBundle\Controller\TemplateController
-    defaults:
-        template: 'health.html.twig'
+# Health check endpoint is handled by App\Controller\HealthController via attributes

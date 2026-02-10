@@ -84,7 +84,7 @@ RUN php -r "\
     'APP_ENV' => 'prod', \
     'APP_DEBUG' => '0', \
     'APP_SECRET' => '86d65f319c2756d34b934f31df998dbf', \
-    'DATABASE_URL' => 'mysql://root:pFPcUYsASVGzTccRsMuiDKxGaaONSefG@mysql.railway.internal:3306/railway?serverVersion=8.0', \
+    'DATABASE_URL' => 'mysql://root:xylbarLKdKictHtllelHEcFLbozRYrDm@mysql.railway.internal:3306/railway?serverVersion=8.0', \
     'MAILER_DSN' => 'null://null', \
     'DEFAULT_URI' => 'https://norsuscheduling1-production.up.railway.app', \
     'MESSENGER_TRANSPORT_DSN' => 'doctrine://default', \

@@ -7,5 +7,5 @@ watchPatterns = ["**/*.php", "composer.json", "composer.lock", "templates/**", "
 startCommand = "/usr/local/bin/start.sh"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
-healthcheckPath = "/"
+healthcheckPath = "/health"
 healthcheckTimeout = 100

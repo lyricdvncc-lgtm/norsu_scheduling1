@@ -76,23 +76,8 @@ RUN chmod +x /usr/local/bin/start.sh
 # Copy application files
 COPY . .
 
-# === CRITICAL: Create .env.local.php with baked-in production values ===
-# Symfony checks .env.local.php FIRST before .env file.
-# This eliminates the need for .env at runtime entirely.
-RUN php -r "\
-\$vars = [ \
-    'APP_ENV' => 'prod', \
-    'APP_DEBUG' => '0', \
-    'APP_SECRET' => '86d65f319c2756d34b934f31df998dbf', \
-    'DATABASE_URL' => 'mysql://root:xylbarLKdKictHtllelHEcFLbozRYrDm@mysql.railway.internal:3306/railway?serverVersion=8.0', \
-    'MAILER_DSN' => 'null://null', \
-    'DEFAULT_URI' => 'https://norsuscheduling1-production.up.railway.app', \
-    'MESSENGER_TRANSPORT_DSN' => 'doctrine://default', \
-]; \
-file_put_contents('.env.local.php', '<?php return ' . var_export(\$vars, true) . ';' . PHP_EOL);"
-
-# Also create a minimal .env so Symfony doesn't complain during composer scripts
-RUN echo 'APP_ENV=prod' > .env
+# .env is already in the repo with correct values
+# Railway environment variables will override at runtime
 
 # Run Composer scripts now that we have the full source
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist --ignore-platform-reqs \
@@ -100,15 +85,12 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progre
 
 # Create required directories and set permissions
 RUN mkdir -p var/cache var/log var/sessions public/curriculum_templates \
-    && chown -R www-data:www-data var public/curriculum_templates .env.local.php \
+    && chown -R www-data:www-data var public/curriculum_templates \
     && chmod -R 775 var
 
-# Warm up cache during build (uses .env.local.php values)
+# Warm up cache during build
 RUN php bin/console cache:clear --env=prod --no-debug 2>&1 || true \
     && php bin/console cache:warmup --env=prod --no-debug 2>&1 || true
-
-# Remove .env (not needed - .env.local.php handles everything)
-RUN rm -f .env
 
 EXPOSE 80
 

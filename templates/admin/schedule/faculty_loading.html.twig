@@ -834,7 +834,8 @@
                                                         data-section="{{ schedule.section }}"
                                                         data-subject-title="{{ schedule.subject.title }}"
                                                         data-units="{{ schedule.subject.units }}"
-                                                        data-room-code="{{ schedule.room.code }}">
+                                                        data-room-code="{{ schedule.room.code }}"
+                                                        onclick="toggleRowCheckbox(this, event)">
                                                         <td class="px-3 py-3">
                                                             <input type="checkbox" class="subject-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer" 
                                                                    value="{{ schedule.id }}">
@@ -1473,6 +1474,11 @@ function addToUnassignedList(scheduleData) {
     
     // Re-attach checkbox event listener
     row.querySelector('.subject-checkbox').addEventListener('change', updateSelectedCount);
+    
+    // Attach row click handler for toggling checkbox
+    row.addEventListener('click', function(event) {
+        toggleRowCheckbox(this, event);
+    });
 }
 
 // Open Load Subject Modal
@@ -1575,6 +1581,16 @@ function updateSelectedCount() {
     checkboxes.forEach(cb => {
         selectedScheduleIds.add(parseInt(cb.value));
     });
+    
+    // Update visual row highlighting
+    document.querySelectorAll('.unassigned-subject-row').forEach(row => {
+        const cb = row.querySelector('.subject-checkbox');
+        if (cb && cb.checked) {
+            row.classList.add('bg-blue-50', 'border-l-4', 'border-l-blue-500');
+        } else {
+            row.classList.remove('bg-blue-50', 'border-l-4', 'border-l-blue-500');
+        }
+    });
 }
 
 // Toggle all schedules
@@ -1596,6 +1612,8 @@ function selectAllSchedules() {
 async function confirmLoadSubject() {
     // Get checked checkboxes
     const checkedBoxes = document.querySelectorAll('.subject-checkbox:checked');
+    
+    console.log('📋 Confirm Load Subject - Found', checkedBoxes.length, 'checked checkboxes out of', document.querySelectorAll('.subject-checkbox').length, 'total');
     
     if (checkedBoxes.length === 0) {
         showTemporaryMessage('Please select at least one subject to assign', 'error');
@@ -2029,10 +2047,32 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 // Attach event listeners to checkboxes
+// Toggle checkbox when clicking anywhere on the row
+function toggleRowCheckbox(row, event) {
+    // Don't toggle if clicking directly on the checkbox (let native behavior handle it)
+    if (event.target.type === 'checkbox') return;
+    
+    const checkbox = row.querySelector('.subject-checkbox');
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        updateSelectedCount();
+    }
+}
+
 function attachCheckboxListeners() {
     document.querySelectorAll('.subject-checkbox').forEach(checkbox => {
         checkbox.removeEventListener('change', updateSelectedCount);
         checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    // Also attach row click handlers to dynamically added rows
+    document.querySelectorAll('.unassigned-subject-row').forEach(row => {
+        if (!row.dataset.rowClickAttached) {
+            row.dataset.rowClickAttached = 'true';
+            row.addEventListener('click', function(event) {
+                toggleRowCheckbox(this, event);
+            });
+        }
     });
 }
 

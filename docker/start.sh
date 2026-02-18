@@ -76,9 +76,20 @@ EOF
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Create required directories
-mkdir -p /var/www/html/var/cache /var/www/html/var/log /var/www/html/var/sessions
+mkdir -p /var/www/html/var/cache /var/www/html/var/log /var/www/html/var/sessions/prod
 chown -R www-data:www-data /var/www/html/var
-chmod -R 775 /var/www/html/var
+chmod -R 777 /var/www/html/var
+
+# Install frontend assets
+echo "Installing importmap assets..."
+php bin/console importmap:install --no-interaction 2>&1 || true
+
+# Clear and warm up cache
+echo "Warming up cache..."
+php bin/console cache:clear --no-interaction 2>&1 || true
+php bin/console cache:warmup --no-interaction 2>&1 || true
+chown -R www-data:www-data /var/www/html/var
+chmod -R 777 /var/www/html/var
 
 # Run database migrations
 echo "Running database schema update..."

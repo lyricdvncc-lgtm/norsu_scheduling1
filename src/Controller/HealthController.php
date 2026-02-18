@@ -65,4 +65,26 @@ class HealthController extends AbstractController
         // Useful for load balancers that don't need detailed info
         return new Response('OK', Response::HTTP_OK, ['Content-Type' => 'text/plain']);
     }
+
+    #[Route('/health/debug-log', name: 'app_health_debug_log', methods: ['GET'])]
+    public function debugLog(): Response
+    {
+        $logDir = $this->getParameter('kernel.logs_dir');
+        $env = $this->getParameter('kernel.environment');
+        $logFile = $logDir . '/' . $env . '.log';
+        
+        if (!file_exists($logFile)) {
+            return new Response('No log file found at: ' . $logFile, 200, ['Content-Type' => 'text/plain']);
+        }
+        
+        // Read the last 5000 bytes of the log file
+        $fileSize = filesize($logFile);
+        $offset = max(0, $fileSize - 5000);
+        $fp = fopen($logFile, 'r');
+        fseek($fp, $offset);
+        $content = fread($fp, 5000);
+        fclose($fp);
+        
+        return new Response($content, 200, ['Content-Type' => 'text/plain']);
+    }
 }

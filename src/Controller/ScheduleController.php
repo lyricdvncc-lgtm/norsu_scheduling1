@@ -183,8 +183,9 @@ class ScheduleController extends AbstractController
     }
 
     #[Route('/new', name: 'app_schedule_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, \App\Service\ScheduleConflictDetector $conflictDetector): Response
+    public function new(Request $request, \App\Service\ScheduleConflictDetector $conflictDetector, \Psr\Log\LoggerInterface $logger): Response
     {
+      try {
         // Get department filter from query parameter or session
         $session = $request->getSession();
         $departmentId = $request->query->get('department') ?? $session->get('selected_department_id');
@@ -479,6 +480,15 @@ class ScheduleController extends AbstractController
             'activeSemester' => $activeSemester,
             'dashboard_data' => $this->dashboardService->getAdminDashboardData(),
         ]);
+      } catch (\Throwable $e) {
+        $logger->error('Schedule create page error: ' . $e->getMessage(), [
+            'exception' => $e,
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        throw $e;
+      }
     }
 
     #[Route('/{id}', name: 'app_schedule_show', methods: ['GET'], requirements: ['id' => '\d+'])]

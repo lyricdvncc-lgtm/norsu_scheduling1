@@ -54,7 +54,6 @@ class SubjectsReportPdfService
         // Get all subjects with their schedules
         $qb = $this->entityManager->getRepository(\App\Entity\Subject::class)
             ->createQueryBuilder('sub')
-            ->select('sub', 'd')
             ->leftJoin('sub.department', 'd')
             ->where('sub.deletedAt IS NULL')
             ->orderBy('d.name', 'ASC')
@@ -128,9 +127,7 @@ class SubjectsReportPdfService
 
             // Only include subjects that have schedules matching the filter criteria
             // Skip subjects with 0 matching schedules when filters are applied
-            // Also validate that the subject has required data
-            if ((count($subjectSchedules) > 0 || (!$year && !$semester)) && 
-                $subject->getCode() && $subject->getTitle() && $subject->getDepartment()) {
+            if (count($subjectSchedules) > 0 || (!$year && !$semester)) {
                 $subjectsData[] = [
                     'subject' => $subject,
                     'schedules' => $scheduleDetails,
@@ -211,13 +208,12 @@ class SubjectsReportPdfService
 
         foreach ($subjectsData as $data) {
             $subject = $data['subject'];
-            $subjectType = strtolower($subject->getType() ?? 'lecture');
-            if ($subjectType === 'lecture') {
+            if (strtolower($subject->getType()) === 'lecture') {
                 $totalLecture++;
             } else {
                 $totalLab++;
             }
-            $totalUnits += $subject->getUnits() ?? 0;
+            $totalUnits += $subject->getUnits();
             $totalSchedules += count($data['schedules']);
         }
 
@@ -300,8 +296,7 @@ class SubjectsReportPdfService
                 // Show each schedule on a separate row
                 foreach ($schedules as $schedule) {
                     $rowHeight = 6;
-                    $subjectTitle = $subject->getTitle() ?? '';
-                    $titleLines = $pdf->getNumLines($subjectTitle, 65);
+                    $titleLines = $pdf->getNumLines($subject->getTitle(), 65);
                     $rowHeight = max($rowHeight, $titleLines * 4);
                     
                     $y = $pdf->GetY();
@@ -327,17 +322,12 @@ class SubjectsReportPdfService
                         $y = $pdf->GetY();
                     }
                     
-                    // Prepare subject data as strings
-                    $codeWithSection = ($subject->getCode() ?? '') . ' - ' . $schedule['section'];
-                    $subjectTitleStr = (string)($subject->getTitle() ?? '');
-                    $unitsStr = (string)($subject->getUnits() ?? '');
-                    $typeStr = ucfirst((string)($subject->getType() ?? 'lecture'));
-                    
                     // Code with section (e.g., "ITS 100 - A")
+                    $codeWithSection = $subject->getCode() . ' - ' . $schedule['section'];
                     $pdf->MultiCell(28, $rowHeight, $codeWithSection, 1, 'L', false, 0, $startX, $y);
-                    $pdf->MultiCell(65, $rowHeight, $subjectTitleStr, 1, 'L', false, 0, $startX + 28, $y);
-                    $pdf->MultiCell(10, $rowHeight, $unitsStr, 1, 'C', false, 0, $startX + 93, $y);
-                    $pdf->MultiCell(22, $rowHeight, $typeStr, 1, 'C', false, 0, $startX + 103, $y);
+                    $pdf->MultiCell(65, $rowHeight, $subject->getTitle(), 1, 'L', false, 0, $startX + 28, $y);
+                    $pdf->MultiCell(10, $rowHeight, $subject->getUnits(), 1, 'C', false, 0, $startX + 93, $y);
+                    $pdf->MultiCell(22, $rowHeight, ucfirst($subject->getType()), 1, 'C', false, 0, $startX + 103, $y);
                     
                     // Schedule details
                     $pdf->MultiCell(38, $rowHeight, $schedule['time'], 1, 'C', false, 0, $startX + 125, $y);

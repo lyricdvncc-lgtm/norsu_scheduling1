@@ -11,12 +11,13 @@
     "require": {
         "php": ">=8.2",
         "ext-ctype": "*",
+        "ext-gd": "*",
         "ext-iconv": "*",
         "ext-zip": "*",
-        "doctrine/dbal": "^3.10.4",
         "doctrine/data-fixtures": "^1.6",
+        "doctrine/dbal": "^3.10.4",
         "doctrine/doctrine-bundle": "^2.18.2",
-        "doctrine/doctrine-fixtures-bundle": "^3.6",
+        "doctrine/doctrine-fixtures-bundle": "^3.7",
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6",
         "phpdocumentor/reflection-docblock": "^5.6.6",
@@ -54,8 +55,7 @@
         "symfony/yaml": "7.3.*",
         "tecnickcom/tcpdf": "^6.10.1",
         "twig/extra-bundle": "^2.12|^3.22.2",
-        "twig/twig": "^2.12|^3.22.2",
-        "ext-gd": "*"
+        "twig/twig": "^2.12|^3.22.2"
     },
     "config": {
         "allow-plugins": {

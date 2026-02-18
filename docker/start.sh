@@ -94,7 +94,12 @@ chmod -R 777 /var/www/html/var
 # Run database migrations
 echo "Running database schema update..."
 php bin/console doctrine:schema:update --force --no-interaction 2>&1 || true
+php bin/console doctrine:migrations:sync-metadata-storage --no-interaction 2>&1 || true
 php bin/console doctrine:migrations:version --add --all --no-interaction 2>&1 || true
+
+# Load fixtures (create admin account)
+echo "Loading fixtures..."
+php bin/console doctrine:fixtures:load --no-interaction --append 2>&1 || true
 
 echo "Starting PHP-FPM and Nginx via Supervisor..."
 

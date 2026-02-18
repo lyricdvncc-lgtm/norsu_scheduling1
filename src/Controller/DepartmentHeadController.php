@@ -1272,9 +1272,9 @@ class DepartmentHeadController extends AbstractController
             
             // Add semester as a property (we'll use the first one for filtering)
             if (!empty($semesters)) {
-                $subject->semester = $semesters[0]['semester'];
+                $subject->setSemester($semesters[0]['semester']);
             } else {
-                $subject->semester = ''; // No semester info
+                $subject->setSemester(''); // No semester info
             }
         }
         

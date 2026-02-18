@@ -49,28 +49,10 @@ class CreateAdminUserCommand extends Command
             $username = $io->ask('Enter admin username', 'admin');
         }
 
-        // Check if username already exists
-        $existingUser = $this->entityManager->getRepository(User::class)
-            ->findOneBy(['username' => $username]);
-
-        if ($existingUser) {
-            $io->error("User with username '{$username}' already exists!");
-            return Command::FAILURE;
-        }
-
         // Get or prompt for email
         $email = $input->getArgument('email');
         if (!$email) {
             $email = $io->ask('Enter admin email', 'admin@norsu.edu.ph');
-        }
-
-        // Check if email already exists
-        $existingEmail = $this->entityManager->getRepository(User::class)
-            ->findOneBy(['email' => $email]);
-
-        if ($existingEmail) {
-            $io->error("User with email '{$email}' already exists!");
-            return Command::FAILURE;
         }
 
         // Get or prompt for password
@@ -94,23 +76,47 @@ class CreateAdminUserCommand extends Command
         $firstName = $input->getOption('first-name') ?: $io->ask('Enter first name', 'Admin');
         $lastName = $input->getOption('last-name') ?: $io->ask('Enter last name', 'User');
 
-        // Create admin user
-        $admin = new User();
-        $admin->setUsername($username);
-        $admin->setEmail($email);
-        $admin->setFirstName($firstName);
-        $admin->setLastName($lastName);
-        $admin->setRole(1); // 1 = Admin role
+        // Check if user already exists by username or email
+        $existingUser = $this->entityManager->getRepository(User::class)
+            ->findOneBy(['username' => $username]);
         
-        // Hash the password
-        $hashedPassword = $this->passwordHasher->hashPassword($admin, $password);
-        $admin->setPassword($hashedPassword);
+        if (!$existingUser) {
+            $existingUser = $this->entityManager->getRepository(User::class)
+                ->findOneBy(['email' => $email]);
+        }
 
-        // Persist the user
-        $this->entityManager->persist($admin);
-        $this->entityManager->flush();
+        if ($existingUser) {
+            // Update existing user's password and ensure it's active
+            $io->note("User '{$username}' already exists. Updating password and ensuring admin role...");
+            
+            $hashedPassword = $this->passwordHasher->hashPassword($existingUser, $password);
+            $existingUser->setPassword($hashedPassword);
+            $existingUser->setRole(1);
+            $existingUser->setIsActive(true);
+            
+            $this->entityManager->flush();
+            
+            $io->success('Admin user password updated successfully!');
+        } else {
+            // Create new admin user
+            $admin = new User();
+            $admin->setUsername($username);
+            $admin->setEmail($email);
+            $admin->setFirstName($firstName);
+            $admin->setLastName($lastName);
+            $admin->setRole(1); // 1 = Admin role
+            $admin->setIsActive(true);
+            
+            // Hash the password
+            $hashedPassword = $this->passwordHasher->hashPassword($admin, $password);
+            $admin->setPassword($hashedPassword);
 
-        $io->success('Admin user created successfully!');
+            // Persist the user
+            $this->entityManager->persist($admin);
+            $this->entityManager->flush();
+
+            $io->success('Admin user created successfully!');
+        }
         
         $io->table(
             ['Field', 'Value'],

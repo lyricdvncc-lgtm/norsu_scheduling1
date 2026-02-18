@@ -97,9 +97,9 @@ php bin/console doctrine:schema:update --force --no-interaction 2>&1 || true
 php bin/console doctrine:migrations:sync-metadata-storage --no-interaction 2>&1 || true
 php bin/console doctrine:migrations:version --add --all --no-interaction 2>&1 || true
 
-# Load fixtures (create admin account)
-echo "Loading fixtures..."
-php bin/console doctrine:fixtures:load --no-interaction --append 2>&1 || true
+# Create admin account (using command that works in all environments)
+echo "Creating admin user..."
+php bin/console app:create-admin admin admin@norsu.edu.ph "Admin@123456" --first-name=System --last-name=Administrator --no-interaction 2>&1 || echo "Admin user may already exist, skipping..."
 
 echo "Starting PHP-FPM and Nginx via Supervisor..."
 

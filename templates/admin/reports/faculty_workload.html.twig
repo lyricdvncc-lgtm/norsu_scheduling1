@@ -1,4 +1,4 @@
-    {% extends 'department_head/base.html.twig' %}
+{% extends 'admin/base.html.twig' %}
 
 {% block stylesheets %}
 {{ parent() }}
@@ -9,12 +9,8 @@
         body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 10pt; }
         .print-header { display: block !important; text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 1rem; margin-bottom: 1.5rem; }
         .print-header h1 { font-size: 24pt; font-weight: bold; color: #1e40af; }
-        .print-header .subtitle { font-size: 11pt; color: #4b5563; }
-        .print-header .meta { font-size: 9pt; color: #6b7280; margin-top: 0.5rem; }
-        .print-stats { display: grid !important; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; margin-bottom: 1rem; page-break-inside: avoid; }
-        .print-stats .stat-card { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: center; background: #f9fafb; }
-        .print-stats .stat-label { font-size: 8pt; color: #6b7280; font-weight: 600; }
-        .print-stats .stat-value { font-size: 18pt; font-weight: bold; color: #111827; }
+        .screen-only { display: none !important; }
+        .print-only { display: block !important; }
         table { width: 100%; border-collapse: collapse; font-size: 9pt; page-break-inside: auto; }
         thead { display: table-header-group; }
         thead th { background: #1e40af !important; color: white !important; font-weight: 600; padding: 0.5rem 0.25rem; text-align: left; border: 1px solid #1e3a8a; }
@@ -24,15 +20,8 @@
         .status-overloaded { background: #fee2e2 !important; color: #991b1b !important; }
         .status-optimal { background: #d1fae5 !important; color: #065f46 !important; }
         .status-underloaded { background: #fef3c7 !important; color: #92400e !important; }
-        .details-row { display: table-row !important; page-break-inside: avoid; }
-        .details-table { margin-top: 0.5rem; font-size: 8pt; background: #f9fafb; }
-        .details-table thead { background: #6b7280 !important; }
-        .details-table td { padding: 0.25rem 0.3rem; }
-        .screen-only { display: none !important; }
-        .print-only { display: block !important; }
-        .print-footer { display: block !important; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #6b7280; text-align: center; }
     }
-    .print-only, .print-header, .print-stats { display: none !important; }
+    .print-only, .print-header { display: none !important; }
     .sort-icon { opacity: 0.3; transition: opacity 0.2s; }
     th:hover .sort-icon { opacity: 0.7; }
     th .sort-icon.active { opacity: 1; }
@@ -47,7 +36,7 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Faculty Workload Report</h1>
                 <p class="mt-2 text-sm text-gray-600">
-                    Detailed analysis of faculty teaching loads
+                    System-wide analysis of faculty teaching loads across all departments
                     <span x-show="activeBadge" class="ml-2 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -85,14 +74,23 @@
                 Clear Filters
             </button>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                <input type="text" x-model="filters.search" @input.debounce.300ms="resetPage()" placeholder="Search name, email..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <input type="text" x-model="filters.search" @input.debounce.300ms="resetPage()" placeholder="Search name, email..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                <select x-model="filters.department" @change="fetchData()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                <select x-model="filters.academicYear" @change="fetchData()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select x-model="filters.academicYear" @change="fetchData()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Academic Years</option>
                     {% for year in academic_years %}
                         <option value="{{ year.id }}">{{ year.year }}</option>
@@ -101,7 +99,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-                <select x-model="filters.semester" @change="fetchData()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select x-model="filters.semester" @change="fetchData()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Semesters</option>
                     <option value="1st">1st Semester</option>
                     <option value="2nd">2nd Semester</option>
@@ -110,7 +108,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select x-model="filters.status" @change="resetPage()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select x-model="filters.status" @change="resetPage()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Status</option>
                     <option value="overloaded">Overloaded (&gt;21 units)</option>
                     <option value="optimal">Optimal (15-21 units)</option>
@@ -119,7 +117,7 @@
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Show entries</label>
-                <select x-model.number="perPage" @change="resetPage()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <select x-model.number="perPage" @change="resetPage()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="10">10</option>
                     <option value="15">15</option>
                     <option value="25">25</option>
@@ -130,7 +128,7 @@
         </div>
     </div>
 
-    {# Statistics Cards - dynamically updated #}
+    {# Statistics Cards #}
     <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6 screen-only">
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between">
@@ -204,7 +202,7 @@
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
         {# Loading overlay #}
         <div x-show="loading" class="absolute inset-0 bg-white/70 z-10 flex items-center justify-center">
-            <div class="flex items-center space-x-2 text-teal-600">
+            <div class="flex items-center space-x-2 text-blue-600">
                 <svg class="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
                 <span class="text-sm font-medium">Loading data...</span>
             </div>
@@ -225,6 +223,13 @@
                                     <svg class="inline h-4 w-4 sort-icon" :class="sort.field === 'name' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20">
                                         <path x-show="sort.field !== 'name' || sort.dir === 'asc'" d="M5 12l5-5 5 5H5z"/>
                                         <path x-show="sort.field === 'name' && sort.dir === 'desc'" d="M15 8l-5 5-5-5h10z"/>
+                                    </svg>
+                                </th>
+                                <th @click="sortBy('department')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                                    Department
+                                    <svg class="inline h-4 w-4 sort-icon" :class="sort.field === 'department' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20">
+                                        <path x-show="sort.field !== 'department' || sort.dir === 'asc'" d="M5 12l5-5 5 5H5z"/>
+                                        <path x-show="sort.field === 'department' && sort.dir === 'desc'" d="M15 8l-5 5-5-5h10z"/>
                                     </svg>
                                 </th>
                                 <th @click="sortBy('course_count')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
@@ -255,7 +260,6 @@
                         <template x-for="fac in paginatedData" :key="fac.id">
                             <tbody class="divide-y divide-gray-200">
                                 <tr class="bg-white hover:bg-gray-50 cursor-pointer" @click="toggleExpand(fac.id)">
-                                    {# Faculty row #}
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
                                             <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm screen-only">
@@ -266,6 +270,9 @@
                                                 <div class="text-sm text-gray-500" x-text="fac.email"></div>
                                             </div>
                                         </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="text-sm text-gray-600" x-text="fac.department"></span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">
@@ -291,15 +298,6 @@
                                                   'status-underloaded bg-yellow-100 text-yellow-800': fac.status === 'underloaded',
                                                   'status-optimal bg-green-100 text-green-800': fac.status === 'optimal'
                                               }">
-                                            <svg class="w-4 h-4 mr-1 screen-only" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="fac.status === 'overloaded'">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                            </svg>
-                                            <svg class="w-4 h-4 mr-1 screen-only" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="fac.status === 'underloaded'">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
-                                            <svg class="w-4 h-4 mr-1 screen-only" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-show="fac.status === 'optimal'">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
                                             <span x-text="fac.status.charAt(0).toUpperCase() + fac.status.slice(1)"></span>
                                         </span>
                                     </td>
@@ -310,9 +308,8 @@
                                         </button>
                                     </td>
                                 </tr>
-                                {# Inline expanded course detail row #}
                                 <tr x-show="expandedId === fac.id" class="bg-blue-50">
-                                    <td colspan="6" class="px-6 py-4">
+                                    <td colspan="7" class="px-6 py-4">
                                         <div class="flex items-center justify-between mb-3">
                                             <h4 class="text-sm font-semibold text-gray-900">
                                                 Course Assignments for <span x-text="fac.name" class="text-blue-700"></span>
@@ -324,7 +321,7 @@
                                         </div>
                                         <template x-if="fac.courses.length > 0">
                                             <div class="overflow-x-auto">
-                                                <table class="min-w-full divide-y divide-gray-200 details-table bg-white rounded-lg overflow-hidden shadow-sm">
+                                                <table class="min-w-full divide-y divide-gray-200 bg-white rounded-lg overflow-hidden shadow-sm">
                                                     <thead class="bg-gray-100">
                                                         <tr>
                                                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Course Code</th>
@@ -368,7 +365,7 @@
                     <div class="flex gap-1">
                         <button @click="page = Math.max(1, page - 1)" :disabled="page === 1" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
                         <template x-for="p in visiblePages" :key="p">
-                            <button @click="page = p" :class="p === page ? 'bg-teal-600 text-white border-teal-600' : 'hover:bg-gray-50'" class="px-3 py-1 text-sm border rounded" x-text="p"></button>
+                            <button @click="page = p" :class="p === page ? 'bg-blue-600 text-white border-blue-600' : 'hover:bg-gray-50'" class="px-3 py-1 text-sm border rounded" x-text="p"></button>
                         </template>
                         <button @click="page = Math.min(totalPages, page + 1)" :disabled="page === totalPages" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
                     </div>
@@ -376,7 +373,7 @@
             </div>
         </template>
 
-        <template x-if="filteredData.length === 0">
+        <template x-if="filteredData.length === 0 && !loading">
             <div class="px-6 py-12 text-center">
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -386,8 +383,6 @@
             </div>
         </template>
     </div>
-
-
 </div>
 
 <script>
@@ -396,6 +391,7 @@ function workloadApp() {
         filters: {
             academicYear: '{{ selected_academic_year }}',
             semester: '{{ selected_semester }}',
+            department: '{{ selected_department }}',
             status: '',
             search: ''
         },
@@ -405,22 +401,21 @@ function workloadApp() {
         expandedId: null,
         loading: false,
         standardLoad: {{ statistics.standard_load }},
-        jsonUrl: '{{ path('department_head_reports_faculty_workload_json') }}',
+        jsonUrl: '{{ path('admin_reports_faculty_workload_json') }}',
 
-        // Academic years lookup for badge display
         academicYears: {
             {% for year in academic_years %}
             '{{ year.id }}': {{ year.year|json_encode|raw }}{{ not loop.last ? ',' : '' }}
             {% endfor %}
         },
 
-        // Raw data injected from server (updated via AJAX)
         allData: [
             {% for faculty in workload_data %}
             {
                 id: {{ faculty.id }},
                 name: {{ faculty.name|json_encode|raw }},
                 email: {{ faculty.email|json_encode|raw }},
+                department: {{ faculty.department|json_encode|raw }},
                 initials: {{ (faculty.name|split(' ')|map(n => n|slice(0,1))|join)|json_encode|raw }},
                 units: {{ faculty.units }},
                 percentage: {{ faculty.percentage|round(1) }},
@@ -445,27 +440,21 @@ function workloadApp() {
 
         get filteredData() {
             let data = this.allData;
-
-            // Status filter
             if (this.filters.status) {
                 data = data.filter(f => f.status === this.filters.status);
             }
-
-            // Search filter
             if (this.filters.search) {
                 const q = this.filters.search.toLowerCase();
-                data = data.filter(f => {
-                    return f.name.toLowerCase().includes(q)
-                        || f.email.toLowerCase().includes(q)
-                        || f.courses.some(c => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
-                });
+                data = data.filter(f =>
+                    f.name.toLowerCase().includes(q) ||
+                    f.email.toLowerCase().includes(q) ||
+                    f.department.toLowerCase().includes(q) ||
+                    f.courses.some(c => c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q))
+                );
             }
-
-            // Sort
             if (this.sort.field) {
                 data = [...data].sort((a, b) => {
-                    let va = a[this.sort.field];
-                    let vb = b[this.sort.field];
+                    let va = a[this.sort.field], vb = b[this.sort.field];
                     if (typeof va === 'string') va = va.toLowerCase();
                     if (typeof vb === 'string') vb = vb.toLowerCase();
                     if (va < vb) return this.sort.dir === 'asc' ? -1 : 1;
@@ -473,7 +462,6 @@ function workloadApp() {
                     return 0;
                 });
             }
-
             return data;
         },
 
@@ -514,21 +502,15 @@ function workloadApp() {
             this.page = 1;
         },
 
-        toggleExpand(id) {
-            this.expandedId = this.expandedId === id ? null : id;
-        },
-
-        resetPage() {
-            this.page = 1;
-            this.expandedId = null;
-        },
+        toggleExpand(id) { this.expandedId = this.expandedId === id ? null : id; },
+        resetPage() { this.page = 1; this.expandedId = null; },
 
         clearFilters() {
-            const yearChanged = this.filters.academicYear !== '' || this.filters.semester !== '';
-            this.filters = { academicYear: '', semester: '', status: '', search: '' };
+            const needsRefetch = this.filters.academicYear !== '' || this.filters.semester !== '' || this.filters.department !== '';
+            this.filters = { academicYear: '', semester: '', department: '', status: '', search: '' };
             this.page = 1;
             this.expandedId = null;
-            if (yearChanged) this.fetchData();
+            if (needsRefetch) this.fetchData();
         },
 
         get activeBadge() {
@@ -547,6 +529,7 @@ function workloadApp() {
                 const params = new URLSearchParams();
                 if (this.filters.academicYear) params.set('academic_year', this.filters.academicYear);
                 if (this.filters.semester) params.set('semester', this.filters.semester);
+                if (this.filters.department) params.set('department', this.filters.department);
                 const resp = await fetch(this.jsonUrl + '?' + params.toString());
                 if (!resp.ok) throw new Error('Network error');
                 const json = await resp.json();

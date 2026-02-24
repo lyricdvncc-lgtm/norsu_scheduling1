@@ -6,6 +6,18 @@
     {{ parent() }}
     <!-- DataTables CSS - Local -->
     <link rel="stylesheet" href="{{ asset('vendor/css/jquery.dataTables.min.css') }}">
+    <style>
+        /* Override DataTables default row striping (uses box-shadow on cells) */
+        table.dataTable tbody tr {
+            background-color: #ffffff !important;
+        }
+        table.dataTable tbody tr > * {
+            box-shadow: none !important;
+        }
+        table.dataTable tbody tr:hover {
+            background-color: #f9fafb !important;
+        }
+    </style>
 {% endblock %}
 
 {% block main_content %}
@@ -159,7 +171,7 @@
 
         <!-- Table Content -->
         <div class="overflow-x-auto">
-            <table id="roomsTable" class="min-w-full divide-y divide-gray-200 display">
+            <table id="roomsTable" class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Room Info</th>

@@ -261,9 +261,6 @@
             padding-top: 0.625rem !important;
             padding-bottom: 0.625rem !important;
         }
-                transform: none;
-            }
-        }
         
         @media (max-width: 1024px) {
             .sidebar-scroll {
@@ -276,6 +273,7 @@
             }
         }
     </style>
+    {% block stylesheets %}{% endblock %}
 </head>
 <body class="h-full" x-data="{ mobileMenuOpen: false }">
     <div class="flex h-screen overflow-hidden bg-gray-50 main-wrapper">
@@ -459,6 +457,18 @@
                                 </svg>
                                 History & Reports
                             </a>
+                            <a href="{{ path('admin_reports_faculty_workload') }}" class="nav-item {% if app.request.get('_route') starts with 'admin_reports_faculty_workload' %}bg-teal-50 border-teal-500 text-teal-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'admin_reports_faculty_workload') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                <svg class="{% if app.request.get('_route') starts with 'admin_reports_faculty_workload' %}text-teal-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                Faculty Workload
+                            </a>
+                            <a href="{{ path('admin_reports_room_utilization') }}" class="nav-item {% if app.request.get('_route') starts with 'admin_reports_room_utilization' %}bg-teal-50 border-teal-500 text-teal-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'admin_reports_room_utilization') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                <svg class="{% if app.request.get('_route') starts with 'admin_reports_room_utilization' %}text-teal-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                </svg>
+                                Room Utilization
+                            </a>
                         </div>
                     </div>
                 </nav>
@@ -468,7 +478,7 @@
         <!-- Sidebar for Desktop -->
         <div class="hidden lg:flex lg:flex-shrink-0">
             <div class="flex flex-col w-72">
-                <div class="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto bg-white shadow-xl sidebar-scroll">
+                <div id="desktop-sidebar" class="flex flex-col flex-grow pt-5 pb-4 overflow-y-auto bg-white shadow-xl sidebar-scroll">
                     <!-- Logo and Brand -->
                     <div class="flex items-center flex-shrink-0 px-6 mb-2">
                         <div class="flex items-center">
@@ -620,6 +630,18 @@
                                     </svg>
                                     History & Reports
                                 </a>
+                                <a href="{{ path('admin_reports_faculty_workload') }}" class="nav-item {% if app.request.get('_route') starts with 'admin_reports_faculty_workload' %}bg-teal-50 border-teal-500 text-teal-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'admin_reports_faculty_workload') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                    <svg class="{% if app.request.get('_route') starts with 'admin_reports_faculty_workload' %}text-teal-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    Faculty Workload
+                                </a>
+                                <a href="{{ path('admin_reports_room_utilization') }}" class="nav-item {% if app.request.get('_route') starts with 'admin_reports_room_utilization' %}bg-teal-50 border-teal-500 text-teal-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'admin_reports_room_utilization') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                    <svg class="{% if app.request.get('_route') starts with 'admin_reports_room_utilization' %}text-teal-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Room Utilization
+                                </a>
                             </div>
                         </div>
 
@@ -651,12 +673,7 @@
                                     </svg>
                                     Activity Logs
                                 </a>
-                                <a href="#" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-3 text-sm font-medium rounded-lg">
-                                    <svg class="text-gray-400 group-hover:text-gray-500 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                                    </svg>
-                                    Backup
-                                </a>
+
                             </div>
                         </div>
                     </nav>
@@ -721,7 +738,7 @@
                             <button class="p-3 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-xl transition-colors duration-200 relative">
                                 <span class="sr-only">View notifications</span>
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zm0 0V7a6 6 0 10-12 0v10l-5 5h5m7 0a3 3 0 01-6 0m6 0H9"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
                                 </svg>
                                 <span class="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-400 ring-2 ring-white"></span>
                             </button>
@@ -1220,6 +1237,37 @@
 
     <!-- Include Profile Modal -->
     {% include 'components/profile_modal.html.twig' %}
+
+    <!-- Preserve sidebar scroll position across page loads -->
+    <script>
+        (function() {
+            var sidebar = document.getElementById('desktop-sidebar');
+            if (!sidebar) return;
+
+            // Restore scroll position instantly before paint — sidebar appears exactly where it was
+            var saved = sessionStorage.getItem('sidebarScrollTop');
+            if (saved !== null) {
+                sidebar.scrollTop = parseInt(saved, 10);
+            }
+
+            // Continuously save scroll position so it's always up to date
+            var ticking = false;
+            sidebar.addEventListener('scroll', function() {
+                if (!ticking) {
+                    ticking = true;
+                    requestAnimationFrame(function() {
+                        sessionStorage.setItem('sidebarScrollTop', sidebar.scrollTop);
+                        ticking = false;
+                    });
+                }
+            }, { passive: true });
+
+            // Also save on navigation
+            window.addEventListener('beforeunload', function() {
+                sessionStorage.setItem('sidebarScrollTop', sidebar.scrollTop);
+            });
+        })();
+    </script>
 
     <!-- Alpine.js loaded last to ensure all component functions are defined -->
     <script src="{{ asset('vendor/js/alpine.min.js') }}"></script>

@@ -66,8 +66,8 @@ class ScheduleConflictDetector
                         'schedule' => $existing,
                         'message' => sprintf(
                             'Room %s is already booked for %s (%s) from %s to %s (Section: %s)',
-                            $existing->getRoom()->getName(),
-                            $existing->getSubject()->getCode(),
+                            $existing->getRoom() ? ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed Room')) : 'Unassigned',
+                            $existing->getSubject() ? $existing->getSubject()->getCode() : 'Unknown',
                             $existing->getDayPattern(),
                             $existing->getStartTime()->format('g:i A'),
                             $existing->getEndTime()->format('g:i A'),
@@ -258,13 +258,13 @@ class ScheduleConflictDetector
                     'schedule' => $existing,
                     'message' => sprintf(
                         'Faculty %s is already teaching %s (Section %s) on %s from %s to %s in Room %s',
-                        $existing->getFaculty()->getFullName(),
-                        $existing->getSubject()->getCode(),
+                        $existing->getFaculty() ? $existing->getFaculty()->getFullName() : 'Unknown',
+                        $existing->getSubject() ? $existing->getSubject()->getCode() : 'Unknown',
                         $existing->getSection() ?? 'N/A',
                         $existing->getDayPattern(),
                         $existing->getStartTime()->format('g:i A'),
                         $existing->getEndTime()->format('g:i A'),
-                        $existing->getRoom()->getName()
+                        $existing->getRoom() ? ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed Room')) : 'No Room Assigned'
                     )
                 ];
             }
@@ -372,13 +372,13 @@ class ScheduleConflictDetector
                         'type' => 'section_conflict',
                         'schedule' => $existing,
                         'message' => sprintf(
-                            'DUPLICATE: Section %s is already scheduled for %s (%s) from %s to %s in Room %s',
+                            'DUPLICATE: Section %s is already scheduled for %s (%s) from %s to %s in %s',
                             $section,
                             $existingSubject->getCode(),
                             $existing->getDayPattern(),
                             $existing->getStartTime()->format('g:i A'),
                             $existing->getEndTime()->format('g:i A'),
-                            $existing->getRoom()->getName()
+                            $existing->getRoom() ? ('Room ' . ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed'))) : 'No Room Assigned'
                         )
                     ];
                 } else {
@@ -401,7 +401,7 @@ class ScheduleConflictDetector
                             $existing->getStartTime()->format('g:i A'),
                             $existing->getEndTime()->format('g:i A'),
                             $existing->getFaculty() ? $existing->getFaculty()->getFullName() : 'Unassigned',
-                            $existing->getRoom() ? $existing->getRoom()->getName() : 'Unassigned'
+                            $existing->getRoom() ? ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed Room')) : 'No Room Assigned'
                         )
                     ];
                 }
@@ -525,7 +525,7 @@ class ScheduleConflictDetector
                         $existing->getStartTime()->format('g:i A'),
                         $existing->getEndTime()->format('g:i A'),
                         $existing->getFaculty() ? $existing->getFaculty()->getFullName() : 'Unassigned',
-                        $existing->getRoom() ? $existing->getRoom()->getName() : 'Unassigned'
+                        $existing->getRoom() ? ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed Room')) : 'No Room Assigned'
                     )
                 ];
             }
@@ -571,13 +571,13 @@ class ScheduleConflictDetector
                 'type' => 'duplicate_subject_section',
                 'schedule' => $existing,
                 'message' => sprintf(
-                    'Subject %s Section %s already exists on %s from %s to %s in Room %s',
-                    $existing->getSubject()->getCode(),
-                    $existing->getSection(),
+                    'Subject %s Section %s already exists on %s from %s to %s in %s',
+                    $existing->getSubject() ? $existing->getSubject()->getCode() : 'Unknown',
+                    $existing->getSection() ?? 'N/A',
                     $existing->getDayPattern(),
                     $existing->getStartTime()->format('g:i A'),
                     $existing->getEndTime()->format('g:i A'),
-                    $existing->getRoom()->getName()
+                    $existing->getRoom() ? ('Room ' . ($existing->getRoom()->getCode() ?: ($existing->getRoom()->getName() ?: 'Unnamed'))) : 'No Room Assigned'
                 )
             ];
         }

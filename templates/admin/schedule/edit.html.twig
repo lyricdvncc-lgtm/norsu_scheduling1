@@ -1,4 +1,4 @@
-{% extends 'admin/base.html.twig' %}
+{% extends isDepartmentHead is defined and isDepartmentHead ? 'department_head/base.html.twig' : 'admin/base.html.twig' %}
 
 {% block title %}Edit Schedule{% endblock %}
 
@@ -12,7 +12,7 @@
                 <p class="mt-2 text-sm text-gray-600">Update the schedule details below</p>
             </div>
             <div class="flex gap-2">
-                <a href="{{ path('app_schedule_index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
+                <a href="{{ isDepartmentHead is defined and isDepartmentHead ? path('department_head_schedules') : path('app_schedule_index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition">
                     <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
@@ -68,7 +68,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left Column: Form -->
         <div class="lg:col-span-2">
-            <form method="post" action="{{ path('app_schedule_edit', {id: schedule.id}) }}" id="scheduleForm" class="space-y-6" novalidate>
+            <form method="post" action="{{ isDepartmentHead is defined and isDepartmentHead ? path('department_head_schedules_edit', {id: schedule.id}) : path('app_schedule_edit', {id: schedule.id}) }}" id="scheduleForm" class="space-y-6" novalidate>
                 
                 <!-- Step 1: Subject Details -->
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -87,8 +87,6 @@
                             </label>
                             <select id="subject" name="subject" required 
                                     class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition"
-                                    style="max-height: 300px; overflow-y: auto;"
-                                    size="1"
                                     onchange="updateSubjectInfo()">
                                 <option value="">Choose a subject...</option>
                                 {% for subject in subjects %}
@@ -258,7 +256,7 @@
                             <span class="text-red-500">*</span> Required fields
                         </p>
                         <div class="flex gap-3">
-                            <a href="{{ path('app_schedule_index') }}" 
+                            <a href="{{ isDepartmentHead is defined and isDepartmentHead ? path('department_head_schedules') : path('app_schedule_index') }}" 
                                class="px-6 py-2.5 border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition font-medium">
                                 Cancel
                             </a>
@@ -405,7 +403,7 @@ function checkForConflicts() {
 
     // Debounce the API call
     conflictCheckTimeout = setTimeout(() => {
-        fetch('{{ path('app_schedule_check_conflict') }}', {
+        fetch('{{ isDepartmentHead is defined and isDepartmentHead ? path('department_head_schedules_check_conflicts') : path('app_schedule_check_conflict') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

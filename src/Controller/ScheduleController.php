@@ -384,6 +384,28 @@ class ScheduleController extends AbstractController
                         ]);
                     });
                     $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+                    // Deduplicate: keep only the most specific conflict per existing schedule
+                    $priorityMap = [
+                        'section_conflict' => 1,
+                        'block_sectioning_conflict' => 2,
+                        'room_time_conflict' => 3,
+                        'duplicate_subject_section' => 4,
+                    ];
+                    $bestBySchedule = [];
+                    $noScheduleConflicts = [];
+                    foreach ($hardConflicts as $conflict) {
+                        $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                        if (!$conflictScheduleId) {
+                            $noScheduleConflicts[] = $conflict;
+                            continue;
+                        }
+                        $priority = $priorityMap[$conflict['type']] ?? 99;
+                        if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                            $bestBySchedule[$conflictScheduleId] = $conflict;
+                        }
+                    }
+                    $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
                     
                     if (!empty($hardConflicts)) {
                         foreach ($hardConflicts as $conflict) {
@@ -563,6 +585,28 @@ class ScheduleController extends AbstractController
                     ]);
                 });
                 $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+                // Deduplicate: keep only the most specific conflict per existing schedule
+                $priorityMap = [
+                    'section_conflict' => 1,
+                    'block_sectioning_conflict' => 2,
+                    'room_time_conflict' => 3,
+                    'duplicate_subject_section' => 4,
+                ];
+                $bestBySchedule = [];
+                $noScheduleConflicts = [];
+                foreach ($hardConflicts as $conflict) {
+                    $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                    if (!$conflictScheduleId) {
+                        $noScheduleConflicts[] = $conflict;
+                        continue;
+                    }
+                    $priority = $priorityMap[$conflict['type']] ?? 99;
+                    if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                        $bestBySchedule[$conflictScheduleId] = $conflict;
+                    }
+                }
+                $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
                 
                 if (!empty($hardConflicts)) {
                     // Rollback changes
@@ -772,6 +816,29 @@ class ScheduleController extends AbstractController
                     || $conflict['type'] === 'block_sectioning_conflict';
             });
             $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+            // Deduplicate: when the same existing schedule triggers multiple conflict types,
+            // keep only the most specific one (section_conflict > room_time_conflict > duplicate_subject_section)
+            $priorityMap = [
+                'section_conflict' => 1,
+                'block_sectioning_conflict' => 2,
+                'room_time_conflict' => 3,
+                'duplicate_subject_section' => 4,
+            ];
+            $bestBySchedule = [];
+            $noScheduleConflicts = [];
+            foreach ($hardConflicts as $conflict) {
+                $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                if (!$conflictScheduleId) {
+                    $noScheduleConflicts[] = $conflict;
+                    continue;
+                }
+                $priority = $priorityMap[$conflict['type']] ?? 99;
+                if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                    $bestBySchedule[$conflictScheduleId] = $conflict;
+                }
+            }
+            $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
             
             // Check capacity warnings
             $schedule->setEnrolledStudents(0); // Temporary for capacity check

@@ -4,7 +4,6 @@ namespace App\Form;
 
 use App\Entity\Room;
 use App\Entity\Department;
-use App\Entity\DepartmentGroup;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -60,17 +59,6 @@ class RoomFormType extends AbstractType
                 'constraints' => [
                     new Assert\NotBlank(['message' => 'Department is required'])
                 ]
-            ])
-            ->add('departmentGroup', EntityType::class, [
-                'class' => DepartmentGroup::class,
-                'choice_label' => 'name',
-                'label' => 'Department Group (Optional)',
-                'placeholder' => 'Select department group (optional)',
-                'required' => false,
-                'attr' => [
-                    'class' => 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500'
-                ],
-                'help' => 'If selected, this room will be shared with all departments in the group'
             ])
             ->add('type', ChoiceType::class, [
                 'label' => 'Room Type',

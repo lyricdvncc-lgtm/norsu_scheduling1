@@ -49,6 +49,166 @@ class SubjectsReportPdfService
         return $pdf->Output('', 'S');
     }
 
+    /**
+     * Generate a Subject Offerings PDF from pre-built history data array.
+     * Used by department head history reports.
+     */
+    public function generateSubjectsHistoryPdf(array $subjectsData, ?string $year = null, ?string $semester = null, ?string $departmentName = null, ?string $searchTerm = null): string
+    {
+        $pdf = new TCPDF('L', 'mm', 'LEGAL', true, 'UTF-8', false);
+        $pdf->SetCreator('Smart Scheduling System');
+        $pdf->SetAuthor('NORSU');
+        $pdf->SetTitle('Subject Offerings Report');
+        $pdf->SetSubject('Subject Offerings Catalog');
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(20, 10, 10);
+        $pdf->SetAutoPageBreak(TRUE, 10);
+        $pdf->AddPage();
+
+        $tableWidth = 295;
+        $startX = 20;
+
+        // Header
+        $pdf->SetFont('helvetica', 'B', 16);
+        $pdf->SetX($startX);
+        $pdf->Cell($tableWidth, 8, 'NEGROS ORIENTAL STATE UNIVERSITY', 0, 1, 'C');
+        $pdf->SetFont('helvetica', '', 11);
+        $pdf->SetX($startX);
+        $pdf->Cell($tableWidth, 6, 'Smart Scheduling System', 0, 1, 'C');
+        $pdf->Ln(3);
+        $pdf->SetFont('helvetica', 'B', 14);
+        $pdf->SetX($startX);
+        $pdf->Cell($tableWidth, 8, 'SUBJECT OFFERINGS REPORT', 0, 1, 'C');
+
+        if ($departmentName) {
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->SetTextColor(0, 100, 0);
+            $pdf->SetX($startX);
+            $pdf->Cell($tableWidth, 7, 'Department: ' . $departmentName, 0, 1, 'C');
+            $pdf->SetTextColor(0, 0, 0);
+        }
+
+        $filters = [];
+        if ($year) $filters[] = 'Academic Year: ' . $year;
+        if ($semester) $filters[] = 'Semester: ' . $semester;
+        if ($searchTerm) $filters[] = 'Search: ' . $searchTerm;
+        $filterText = !empty($filters) ? implode(' | ', $filters) : 'All Academic Years and Semesters';
+        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetX($startX);
+        $pdf->Cell($tableWidth, 6, $filterText, 0, 1, 'C');
+        $pdf->Ln(3);
+
+        // Summary
+        $totalSubjects = count($subjectsData);
+        $totalSchedules = 0;
+        $totalUnits = 0;
+        foreach ($subjectsData as $data) {
+            $subject = $data[0];
+            $totalUnits += $subject->getUnits() ?? 0;
+            $totalSchedules += count($data['schedules']);
+        }
+
+        $pdf->SetFont('helvetica', 'B', 10);
+        $pdf->SetFillColor(240, 240, 240);
+        $boxWidth = 65;
+        $boxStartX = $startX + ($tableWidth - $boxWidth * 3) / 2;
+        $pdf->SetX($boxStartX);
+        $pdf->Cell($boxWidth, 7, 'Total Subjects', 1, 0, 'C', true);
+        $pdf->Cell($boxWidth, 7, 'Total Schedules', 1, 0, 'C', true);
+        $pdf->Cell($boxWidth, 7, 'Total Units', 1, 1, 'C', true);
+        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetX($boxStartX);
+        $pdf->Cell($boxWidth, 7, $totalSubjects, 1, 0, 'C');
+        $pdf->Cell($boxWidth, 7, $totalSchedules, 1, 0, 'C');
+        $pdf->Cell($boxWidth, 7, $totalUnits, 1, 1, 'C');
+        $pdf->Ln(5);
+
+        // Table header
+        $colWidths = [28, 70, 12, 18, 36, 20, 22, 45, 22, 22];
+        $colHeaders = ['Code', 'Subject Title', 'Units', 'Section', 'Time', 'Day', 'Room', 'Faculty', 'Year', 'Semester'];
+
+        $this->drawHistoryTableHeader($pdf, $startX, $colWidths, $colHeaders);
+
+        // Data rows
+        $pdf->SetFont('helvetica', '', 7);
+        $pdf->SetTextColor(0, 0, 0);
+        $rowBg = false;
+
+        foreach ($subjectsData as $data) {
+            $subject = $data[0];
+            $schedules = $data['schedules'];
+
+            if (empty($schedules)) {
+                $schedules = [['section' => 'N/A', 'time' => 'N/A', 'day' => 'N/A', 'room' => 'N/A', 'faculty' => 'N/A', 'year' => '', 'semester' => '']];
+            }
+
+            foreach ($schedules as $sch) {
+                $y = $pdf->GetY();
+                $rowHeight = 6;
+                $titleLines = $pdf->getNumLines($subject->getTitle() ?? '', 70);
+                $rowHeight = max($rowHeight, $titleLines * 4);
+
+                if ($y + $rowHeight > $pdf->getPageHeight() - 15) {
+                    $pdf->AddPage();
+                    $this->drawHistoryTableHeader($pdf, $startX, $colWidths, $colHeaders);
+                    $pdf->SetFont('helvetica', '', 7);
+                    $pdf->SetTextColor(0, 0, 0);
+                    $y = $pdf->GetY();
+                }
+
+                if ($rowBg) {
+                    $pdf->SetFillColor(248, 248, 248);
+                } else {
+                    $pdf->SetFillColor(255, 255, 255);
+                }
+
+                $x = $startX;
+                $pdf->MultiCell($colWidths[0], $rowHeight, $subject->getCode() ?? '', 1, 'L', true, 0, $x, $y);
+                $x += $colWidths[0];
+                $pdf->MultiCell($colWidths[1], $rowHeight, $subject->getTitle() ?? '', 1, 'L', true, 0, $x, $y);
+                $x += $colWidths[1];
+                $pdf->MultiCell($colWidths[2], $rowHeight, $subject->getUnits() ?? 0, 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[2];
+                $pdf->MultiCell($colWidths[3], $rowHeight, $sch['section'] ?? 'N/A', 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[3];
+                $pdf->MultiCell($colWidths[4], $rowHeight, $sch['time'] ?? 'N/A', 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[4];
+                $pdf->MultiCell($colWidths[5], $rowHeight, $sch['day'] ?? 'N/A', 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[5];
+                $pdf->MultiCell($colWidths[6], $rowHeight, $sch['room'] ?? 'N/A', 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[6];
+                $pdf->MultiCell($colWidths[7], $rowHeight, $sch['faculty'] ?? 'N/A', 1, 'L', true, 0, $x, $y);
+                $x += $colWidths[7];
+                $pdf->MultiCell($colWidths[8], $rowHeight, $sch['year'] ?? 'N/A', 1, 'C', true, 0, $x, $y);
+                $x += $colWidths[8];
+                $pdf->MultiCell($colWidths[9], $rowHeight, $sch['semester'] ?? 'N/A', 1, 'C', true, 1, $x, $y);
+
+                $rowBg = !$rowBg;
+            }
+        }
+
+        // Footer
+        $pdf->Ln(5);
+        $pdf->SetFont('helvetica', 'I', 8);
+        $pdf->SetTextColor(128, 128, 128);
+        $pdf->Cell(0, 5, 'Generated on: ' . date('F d, Y h:i A'), 0, 1, 'L');
+
+        return $pdf->Output('', 'S');
+    }
+
+    private function drawHistoryTableHeader(TCPDF $pdf, float $startX, array $colWidths, array $colHeaders): void
+    {
+        $pdf->SetFont('helvetica', 'B', 7);
+        $pdf->SetFillColor(51, 122, 183);
+        $pdf->SetTextColor(255, 255, 255);
+        $x = $startX;
+        foreach ($colWidths as $i => $w) {
+            $isLast = ($i === count($colWidths) - 1);
+            $pdf->Cell($w, 6, $colHeaders[$i], 1, $isLast ? 1 : 0, 'C', true);
+        }
+    }
+
     private function getSubjectsData(?string $year, ?string $semester, ?int $departmentId): array
     {
         // Get all subjects with their schedules

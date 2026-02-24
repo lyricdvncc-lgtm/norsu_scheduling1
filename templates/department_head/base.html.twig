@@ -246,15 +246,12 @@
                                 </svg>
                                 History & Reports
                             </a>
-                            <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
-                                <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <a href="{{ path('department_head_reports_room_utilization') }}" class="nav-item {% if app.request.get('_route') starts with 'department_head_reports_room_utilization' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'department_head_reports_room_utilization') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                <svg class="{% if app.request.get('_route') starts with 'department_head_reports_room_utilization' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
                                 </svg>
-                                <span class="flex items-center justify-between flex-1">
-                                    Room Utilization
-                                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
-                                </span>
+                                Room Utilization
                             </a>
                         </div>
                     </div>
@@ -377,15 +374,12 @@
                                     </svg>
                                     History & Reports
                                 </a>
-                                <a href="#" class="nav-item text-gray-400 cursor-not-allowed group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg border-l-4 border-transparent">
-                                    <svg class="text-gray-300 mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <a href="{{ path('department_head_reports_room_utilization') }}" class="nav-item {% if app.request.get('_route') starts with 'department_head_reports_room_utilization' %}bg-blue-50 border-blue-500 text-blue-700{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} border-l-4 {% if not (app.request.get('_route') starts with 'department_head_reports_room_utilization') %}border-transparent{% endif %} group flex items-center px-3 py-3 text-sm font-medium rounded-r-lg">
+                                    <svg class="{% if app.request.get('_route') starts with 'department_head_reports_room_utilization' %}text-blue-500{% else %}text-gray-400 group-hover:text-gray-500{% endif %} mr-4 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
                                     </svg>
-                                    <span class="flex items-center justify-between flex-1">
-                                        Room Utilization
-                                        <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Soon</span>
-                                    </span>
+                                    Room Utilization
                                 </a>
                             </div>
                         </div>

@@ -2,8 +2,27 @@
 
 {% block title %}History & Reports - Department Head Dashboard{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    @media print {
+        nav, .no-print, button, .print-hide { display: none !important; }
+        @page { size: A4 landscape; margin: 1cm; }
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 9pt; }
+        .tab-content { display: block !important; page-break-before: always; }
+        .tab-content:first-of-type { page-break-before: avoid; }
+    }
+    .tab-button { color: #6b7280; }
+    .tab-button:hover { color: #374151; border-color: #d1d5db; }
+    .sort-icon { opacity: 0.3; transition: opacity 0.2s; }
+    th:hover .sort-icon { opacity: 0.7; }
+    th .sort-icon.active { opacity: 1; }
+</style>
+{% endblock %}
+
 {% block main_content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8" x-data="historyApp()">
+    <!-- Header -->
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900 flex items-center">
             <svg class="h-8 w-8 text-teal-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -26,7 +45,7 @@
     {% endif %}
 
     {# Filters #}
-    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-gray-900 flex items-center">
                 <svg class="h-5 w-5 text-gray-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,54 +53,35 @@
                 </svg>
                 Filter Historical Data
             </h2>
+            <button @click="clearFilters()" class="text-sm text-gray-500 hover:text-gray-700">
+                <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                Clear Filters
+            </button>
         </div>
-        
-        <form method="GET" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {# Academic Year Filter #}
-                <div>
-                    <label for="filterYear" class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                    <select name="year" id="filterYear" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" onchange="this.form.submit()">
-                        <option value="">All Years</option>
-                        {% for year in years %}
-                        <option value="{{ year }}" {% if selectedYear == year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                {# Semester Filter #}
-                <div>
-                    <label for="filterSemester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-                    <select name="semester" id="filterSemester" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" onchange="this.form.submit()">
-                        <option value="">All Semesters</option>
-                        <option value="1st" {% if selectedSemester == '1st' %}selected{% endif %}>1st Semester</option>
-                        <option value="2nd" {% if selectedSemester == '2nd' %}selected{% endif %}>2nd Semester</option>
-                        <option value="Summer" {% if selectedSemester == 'Summer' %}selected{% endif %}>Summer</option>
-                    </select>
-                </div>
-
-                {# Search Box #}
-                <div>
-                    <label for="filterSearch" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
-                    <input type="text" name="search" id="filterSearch" value="{{ searchTerm }}" placeholder="Room name, faculty name..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
-                </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+                <select x-model="filters.year" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <option value="">All Years</option>
+                    {% for year in years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
             </div>
-
-            <div class="flex justify-end space-x-3">
-                <a href="{{ path('department_head_reports_history') }}" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition">
-                    <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    Clear
-                </a>
-                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
-                    <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                    </svg>
-                    Apply Filters
-                </button>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                <select x-model="filters.semester" @change="applyFilters()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    <option value="">All Semesters</option>
+                    <option value="1st">1st Semester</option>
+                    <option value="2nd">2nd Semester</option>
+                    <option value="Summer">Summer</option>
+                </select>
             </div>
-        </form>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                <input type="text" x-model="filters.search" @input.debounce.300ms="applyFilters()" placeholder="Search rooms, faculty, subjects..." class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500">
+            </div>
+        </div>
     </div>
 
     {# Summary Cards #}
@@ -90,7 +90,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Rooms Used</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ roomsData|length }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2" x-text="filteredRooms.length"></p>
                 </div>
                 <div class="bg-purple-100 rounded-full p-3">
                     <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,12 +99,11 @@
                 </div>
             </div>
         </div>
-
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Faculty Members</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ facultyData|length }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2" x-text="filteredFaculty.length"></p>
                 </div>
                 <div class="bg-blue-100 rounded-full p-3">
                     <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -113,12 +112,11 @@
                 </div>
             </div>
         </div>
-
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Subject Offerings</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ subjectsData|length }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2" x-text="filteredSubjects.length"></p>
                 </div>
                 <div class="bg-green-100 rounded-full p-3">
                     <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,73 +127,593 @@
         </div>
     </div>
 
-    {# Export Sections #}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {# Rooms Export #}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center mb-4">
-                <svg class="h-6 w-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-900">Room Usage History</h3>
-            </div>
-            <p class="text-sm text-gray-600 mb-4">Export historical data for all rooms used by your department</p>
-            <a href="{{ path('department_head_reports_history', {export: 'rooms-pdf', year: selectedYear, semester: selectedSemester, search: searchTerm}) }}" 
-               class="inline-flex items-center w-full justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                Export PDF
-            </a>
+    {# Tabs #}
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex" aria-label="Tabs">
+                <button @click="activeTab = 'rooms'" :class="activeTab === 'rooms' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                    <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Room History (<span x-text="filteredRooms.length"></span>)
+                </button>
+                <button @click="activeTab = 'faculty'" :class="activeTab === 'faculty' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                    <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Faculty History (<span x-text="filteredFaculty.length"></span>)
+                </button>
+                <button @click="activeTab = 'subjects'" :class="activeTab === 'subjects' ? 'border-teal-500 text-teal-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'" class="tab-button w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm transition-colors">
+                    <svg class="inline-block h-5 w-5 mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    Subject Offerings (<span x-text="filteredSubjects.length"></span>)
+                </button>
+            </nav>
         </div>
 
-        {# Faculty Export #}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center mb-4">
-                <svg class="h-6 w-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-900">Faculty History</h3>
+        {# ==================== ROOMS TAB ==================== #}
+        <div x-show="activeTab === 'rooms'" class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Room Usage History</h2>
+                    <p class="text-sm text-gray-500 mt-1">Showing <span x-text="filteredRooms.length"></span> of <span x-text="allRooms.length"></span> rooms</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <a :href="exportPdfUrl('rooms-pdf')" target="_blank" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        Export PDF
+                    </a>
+                </div>
             </div>
-            <p class="text-sm text-gray-600 mb-4">Export teaching history for all faculty in your department</p>
-            <a href="{{ path('department_head_reports_history', {export: 'faculty-pdf', year: selectedYear, semester: selectedSemester, search: searchTerm}) }}" 
-               class="inline-flex items-center w-full justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                Export PDF
-            </a>
+
+            <template x-if="filteredRooms.length === 0">
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No rooms found</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                </div>
+            </template>
+
+            <template x-if="filteredRooms.length > 0">
+                <div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th @click="sortRooms('code')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Room Code
+                                        <svg class="inline h-4 w-4 sort-icon" :class="roomSort.field === 'code' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortRooms('building')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Building
+                                        <svg class="inline h-4 w-4 sort-icon" :class="roomSort.field === 'building' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortRooms('capacity')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Capacity
+                                        <svg class="inline h-4 w-4 sort-icon" :class="roomSort.field === 'capacity' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortRooms('scheduleCount')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Schedules
+                                        <svg class="inline h-4 w-4 sort-icon" :class="roomSort.field === 'scheduleCount' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Years</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semesters</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="room in paginatedRooms" :key="room.id">
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="px-6 py-4">
+                                            <div class="text-sm font-medium text-gray-900" x-text="room.code"></div>
+                                            <div class="text-xs text-gray-500" x-text="room.name" x-show="room.name"></div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900" x-text="room.building || 'N/A'"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-900" x-text="room.capacity || 'N/A'"></td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800" x-text="room.scheduleCount"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-xs text-gray-600" x-text="room.years || 'N/A'"></td>
+                                        <td class="px-6 py-4">
+                                            <template x-for="sem in (room.semesters ? room.semesters.split(', ') : [])" :key="sem">
+                                                <span class="inline-block px-2 py-0.5 text-xs rounded-full mr-1 mb-1"
+                                                      :class="sem === '1st' ? 'bg-green-100 text-green-800' : (sem === '2nd' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800')"
+                                                      x-text="sem"></span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    {# Rooms Pagination #}
+                    <div class="mt-4 flex items-center justify-between border-t pt-4" x-show="roomTotalPages > 1">
+                        <p class="text-sm text-gray-700">
+                            Showing <span x-text="(roomPage - 1) * perPage + 1"></span> to <span x-text="Math.min(roomPage * perPage, filteredRooms.length)"></span> of <span x-text="filteredRooms.length"></span>
+                        </p>
+                        <div class="flex gap-1">
+                            <button @click="roomPage = Math.max(1, roomPage - 1)" :disabled="roomPage === 1" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                            <template x-for="p in roomVisiblePages" :key="p">
+                                <button @click="roomPage = p" :class="p === roomPage ? 'bg-teal-600 text-white border-teal-600' : 'hover:bg-gray-50'" class="px-3 py-1 text-sm border rounded" x-text="p"></button>
+                            </template>
+                            <button @click="roomPage = Math.min(roomTotalPages, roomPage + 1)" :disabled="roomPage === roomTotalPages" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
-        {# Subjects Info Card #}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div class="flex items-center mb-4">
-                <svg class="h-6 w-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-900">Subject Offerings</h3>
+        {# ==================== FACULTY TAB ==================== #}
+        <div x-show="activeTab === 'faculty'" class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Faculty Teaching History</h2>
+                    <p class="text-sm text-gray-500 mt-1">Showing <span x-text="filteredFaculty.length"></span> of <span x-text="allFaculty.length"></span> faculty members</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <a :href="exportPdfUrl('faculty-pdf')" target="_blank" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        Export PDF
+                    </a>
+                </div>
             </div>
-            <p class="text-sm text-gray-600 mb-4">View all subjects offered by your department</p>
-            <div class="text-center py-2 text-gray-500">
-                <p class="text-sm">Listed in tables below</p>
-            </div>
-        </div>
-    </div>
 
-    {# Data Tables would go here #}
-    <div class="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                </svg>
+            <template x-if="filteredFaculty.length === 0">
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No faculty found</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                </div>
+            </template>
+
+            <template x-if="filteredFaculty.length > 0">
+                <div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th @click="sortFaculty('name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Faculty Name
+                                        <svg class="inline h-4 w-4 sort-icon" :class="facultySort.field === 'name' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortFaculty('employeeId')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Employee ID
+                                        <svg class="inline h-4 w-4 sort-icon" :class="facultySort.field === 'employeeId' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortFaculty('totalUnits')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Teaching Load
+                                        <svg class="inline h-4 w-4 sort-icon" :class="facultySort.field === 'totalUnits' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortFaculty('scheduleCount')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Subjects
+                                        <svg class="inline h-4 w-4 sort-icon" :class="facultySort.field === 'scheduleCount' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Years</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semesters</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <template x-for="fac in paginatedFaculty" :key="fac.id">
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center">
+                                                <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                                    <span class="text-xs font-bold text-blue-600" x-text="fac.initials"></span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-medium text-gray-900" x-text="fac.name"></div>
+                                                    <div class="text-xs text-gray-500" x-text="fac.email"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900" x-text="fac.employeeId || 'N/A'"></td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm font-semibold" x-text="fac.totalUnits + ' units'"></span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800" x-text="fac.scheduleCount + ' subjects'"></span>
+                                            <div class="mt-1 flex flex-wrap gap-1">
+                                                <template x-for="subj in fac.subjects.slice(0, 3)" :key="subj">
+                                                    <span class="inline-flex px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded" x-text="subj"></span>
+                                                </template>
+                                                <span x-show="fac.subjects.length > 3" class="text-xs text-gray-400" x-text="'+' + (fac.subjects.length - 3) + ' more'"></span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 text-xs text-gray-600" x-text="fac.years || 'N/A'"></td>
+                                        <td class="px-6 py-4">
+                                            <template x-for="sem in (fac.semesters ? fac.semesters.split(', ') : [])" :key="sem">
+                                                <span class="inline-block px-2 py-0.5 text-xs rounded-full mr-1 mb-1"
+                                                      :class="sem === '1st' ? 'bg-green-100 text-green-800' : (sem === '2nd' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800')"
+                                                      x-text="sem"></span>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    {# Faculty Pagination #}
+                    <div class="mt-4 flex items-center justify-between border-t pt-4" x-show="facultyTotalPages > 1">
+                        <p class="text-sm text-gray-700">
+                            Showing <span x-text="(facultyPage - 1) * perPage + 1"></span> to <span x-text="Math.min(facultyPage * perPage, filteredFaculty.length)"></span> of <span x-text="filteredFaculty.length"></span>
+                        </p>
+                        <div class="flex gap-1">
+                            <button @click="facultyPage = Math.max(1, facultyPage - 1)" :disabled="facultyPage === 1" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                            <template x-for="p in facultyVisiblePages" :key="p">
+                                <button @click="facultyPage = p" :class="p === facultyPage ? 'bg-teal-600 text-white border-teal-600' : 'hover:bg-gray-50'" class="px-3 py-1 text-sm border rounded" x-text="p"></button>
+                            </template>
+                            <button @click="facultyPage = Math.min(facultyTotalPages, facultyPage + 1)" :disabled="facultyPage === facultyTotalPages" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        {# ==================== SUBJECTS TAB ==================== #}
+        <div x-show="activeTab === 'subjects'" class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900">Subject Offerings</h2>
+                    <p class="text-sm text-gray-500 mt-1">Showing <span x-text="filteredSubjects.length"></span> of <span x-text="allSubjects.length"></span> subjects</p>
+                </div>
+                <div class="flex gap-2 no-print">
+                    <a :href="exportPdfUrl('subjects-pdf')" target="_blank" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition text-sm">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        Export PDF
+                    </a>
+                </div>
             </div>
-            <div class="ml-3">
-                <p class="text-sm text-yellow-700">
-                    <strong>Note:</strong> This page is currently showing a simplified view. Full interactive data tables with sorting, filtering, and detailed views are being finalized.
-                </p>
-            </div>
+
+            <template x-if="filteredSubjects.length === 0">
+                <div class="text-center py-12 bg-gray-50 rounded-lg">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">No subjects found</h3>
+                    <p class="mt-1 text-sm text-gray-500">Try adjusting your filters</p>
+                </div>
+            </template>
+
+            <template x-if="filteredSubjects.length > 0">
+                <div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th @click="sortSubjects('code')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Code
+                                        <svg class="inline h-4 w-4 sort-icon" :class="subjectSort.field === 'code' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortSubjects('title')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Title
+                                        <svg class="inline h-4 w-4 sort-icon" :class="subjectSort.field === 'title' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th @click="sortSubjects('units')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100">
+                                        Units
+                                        <svg class="inline h-4 w-4 sort-icon" :class="subjectSort.field === 'units' ? 'active' : ''" fill="currentColor" viewBox="0 0 20 20"><path d="M5 12l5-5 5 5H5z"/></svg>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedules</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Years</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semesters</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                                </tr>
+                            </thead>
+                            <template x-for="subj in paginatedSubjects" :key="subj.id">
+                                <tbody class="divide-y divide-gray-200">
+                                    <tr class="bg-white hover:bg-gray-50 transition">
+                                        <td class="px-6 py-4">
+                                            <span class="text-sm font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded" x-text="subj.code"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-900" x-text="subj.title"></td>
+                                        <td class="px-6 py-4 text-sm text-gray-900" x-text="subj.units"></td>
+                                        <td class="px-6 py-4">
+                                            <span class="px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800" x-text="subj.schedules.length + ' schedule(s)'"></span>
+                                        </td>
+                                        <td class="px-6 py-4 text-xs text-gray-600" x-text="subj.years || 'N/A'"></td>
+                                        <td class="px-6 py-4">
+                                            <template x-for="sem in (subj.semesters ? subj.semesters.split(', ') : [])" :key="sem">
+                                                <span class="inline-block px-2 py-0.5 text-xs rounded-full mr-1 mb-1"
+                                                      :class="sem === '1st' ? 'bg-green-100 text-green-800' : (sem === '2nd' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800')"
+                                                      x-text="sem"></span>
+                                            </template>
+                                        </td>
+                                        <td class="px-6 py-4 text-center">
+                                            <button @click="subj.expanded = !subj.expanded" class="text-teal-600 hover:text-teal-800 text-xs font-medium">
+                                                <span x-show="!subj.expanded">View</span>
+                                                <span x-show="subj.expanded">Hide</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {# Expanded schedule details - inline below subject row #}
+                                    <tr x-show="subj.expanded" class="bg-blue-50">
+                                        <td colspan="7" class="px-6 py-4">
+                                            <div class="text-xs font-semibold text-gray-700 mb-2">Schedule Details:</div>
+                                            <template x-if="subj.schedules.length > 0">
+                                                <table class="min-w-full text-xs bg-white rounded-lg overflow-hidden shadow-sm">
+                                                    <thead class="bg-gray-100">
+                                                        <tr class="border-b">
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Section</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Day</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Time</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Room</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Faculty</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Year</th>
+                                                            <th class="py-2 px-3 text-left text-gray-500 font-medium">Semester</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="(sch, idx) in subj.schedules" :key="idx">
+                                                            <tr class="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td class="py-2 px-3 font-medium" x-text="sch.section"></td>
+                                                                <td class="py-2 px-3" x-text="sch.day"></td>
+                                                                <td class="py-2 px-3" x-text="sch.time"></td>
+                                                                <td class="py-2 px-3" x-text="sch.room"></td>
+                                                                <td class="py-2 px-3" x-text="sch.faculty"></td>
+                                                                <td class="py-2 px-3" x-text="sch.year || 'N/A'"></td>
+                                                                <td class="py-2 px-3">
+                                                                    <span class="inline-block px-2 py-0.5 rounded-full"
+                                                                          :class="sch.semester === '1st' ? 'bg-green-100 text-green-800' : (sch.semester === '2nd' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800')"
+                                                                          x-text="sch.semester || 'N/A'"></span>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                </table>
+                                            </template>
+                                            <template x-if="subj.schedules.length === 0">
+                                                <p class="text-gray-500 italic">No schedules found for this subject</p>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </template>
+                        </table>
+                    </div>
+                    {# Subjects Pagination #}
+                    <div class="mt-4 flex items-center justify-between border-t pt-4" x-show="subjectTotalPages > 1">
+                        <p class="text-sm text-gray-700">
+                            Showing <span x-text="(subjectPage - 1) * perPage + 1"></span> to <span x-text="Math.min(subjectPage * perPage, filteredSubjects.length)"></span> of <span x-text="filteredSubjects.length"></span>
+                        </p>
+                        <div class="flex gap-1">
+                            <button @click="subjectPage = Math.max(1, subjectPage - 1)" :disabled="subjectPage === 1" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                            <template x-for="p in subjectVisiblePages" :key="p">
+                                <button @click="subjectPage = p" :class="p === subjectPage ? 'bg-teal-600 text-white border-teal-600' : 'hover:bg-gray-50'" class="px-3 py-1 text-sm border rounded" x-text="p"></button>
+                            </template>
+                            <button @click="subjectPage = Math.min(subjectTotalPages, subjectPage + 1)" :disabled="subjectPage === subjectTotalPages" class="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
     </div>
 </div>
+
+<script>
+function historyApp() {
+    return {
+        activeTab: 'rooms',
+        filters: { year: '', semester: '', search: '' },
+        perPage: 15,
+
+        // Pagination state
+        roomPage: 1,
+        facultyPage: 1,
+        subjectPage: 1,
+
+        // Sort state
+        roomSort: { field: 'code', dir: 'asc' },
+        facultySort: { field: 'name', dir: 'asc' },
+        subjectSort: { field: 'code', dir: 'asc' },
+
+        // Raw data from server
+        allRooms: [
+            {% for item in roomsData %}
+            {
+                id: {{ item[0].id }},
+                code: {{ item[0].code|json_encode|raw }},
+                name: {{ (item[0].name ?? '')|json_encode|raw }},
+                building: {{ (item[0].building ?? '')|json_encode|raw }},
+                capacity: {{ item[0].capacity ?? 0 }},
+                scheduleCount: {{ item.scheduleCount }},
+                years: {{ item.years|json_encode|raw }},
+                semesters: {{ item.semesters|json_encode|raw }},
+                yearsList: {{ item.yearsList|json_encode|raw }},
+                semestersList: {{ item.semestersList|json_encode|raw }}
+            }{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        ],
+
+        allFaculty: [
+            {% for item in facultyData %}
+            {
+                id: {{ item[0].id }},
+                name: {{ (item[0].lastName ~ ', ' ~ item[0].firstName)|json_encode|raw }},
+                firstName: {{ item[0].firstName|json_encode|raw }},
+                lastName: {{ item[0].lastName|json_encode|raw }},
+                initials: {{ (item[0].firstName|slice(0,1) ~ item[0].lastName|slice(0,1))|json_encode|raw }},
+                email: {{ (item[0].email ?? '')|json_encode|raw }},
+                employeeId: {{ (item[0].employeeId ?? '')|json_encode|raw }},
+                scheduleCount: {{ item.scheduleCount }},
+                totalUnits: {{ item.totalUnits }},
+                years: {{ item.years|json_encode|raw }},
+                semesters: {{ item.semesters|json_encode|raw }},
+                subjects: {{ item.subjects|json_encode|raw }},
+                yearsList: {{ item.yearsList|json_encode|raw }},
+                semestersList: {{ item.semestersList|json_encode|raw }}
+            }{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        ],
+
+        allSubjects: [
+            {% for item in subjectsData %}
+            {
+                id: {{ item[0].id }},
+                code: {{ item[0].code|json_encode|raw }},
+                title: {{ item[0].title|json_encode|raw }},
+                units: {{ item[0].units ?? 0 }},
+                years: {{ item.years|json_encode|raw }},
+                semesters: {{ item.semesters|json_encode|raw }},
+                yearsList: {{ item.yearsList|json_encode|raw }},
+                semestersList: {{ item.semestersList|json_encode|raw }},
+                expanded: false,
+                schedules: [
+                    {% for sch in item.schedules %}
+                    {
+                        section: {{ sch.section|json_encode|raw }},
+                        day: {{ sch.day|json_encode|raw }},
+                        time: {{ sch.time|json_encode|raw }},
+                        room: {{ sch.room|json_encode|raw }},
+                        faculty: {{ sch.faculty|json_encode|raw }},
+                        year: {{ (sch.year ?? '')|json_encode|raw }},
+                        semester: {{ (sch.semester ?? '')|json_encode|raw }}
+                    }{{ not loop.last ? ',' : '' }}
+                    {% endfor %}
+                ]
+            }{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        ],
+
+        // Filtered data (computed)
+        get filteredRooms() {
+            return this.filterAndSort(this.allRooms, this.roomSort, 'room');
+        },
+        get filteredFaculty() {
+            return this.filterAndSort(this.allFaculty, this.facultySort, 'faculty');
+        },
+        get filteredSubjects() {
+            return this.filterAndSort(this.allSubjects, this.subjectSort, 'subject');
+        },
+
+        // Paginated data
+        get paginatedRooms() {
+            const start = (this.roomPage - 1) * this.perPage;
+            return this.filteredRooms.slice(start, start + this.perPage);
+        },
+        get paginatedFaculty() {
+            const start = (this.facultyPage - 1) * this.perPage;
+            return this.filteredFaculty.slice(start, start + this.perPage);
+        },
+        get paginatedSubjects() {
+            const start = (this.subjectPage - 1) * this.perPage;
+            return this.filteredSubjects.slice(start, start + this.perPage);
+        },
+
+        // Total pages
+        get roomTotalPages() { return Math.ceil(this.filteredRooms.length / this.perPage) || 1; },
+        get facultyTotalPages() { return Math.ceil(this.filteredFaculty.length / this.perPage) || 1; },
+        get subjectTotalPages() { return Math.ceil(this.filteredSubjects.length / this.perPage) || 1; },
+
+        // Visible page numbers
+        get roomVisiblePages() { return this.getVisiblePages(this.roomPage, this.roomTotalPages); },
+        get facultyVisiblePages() { return this.getVisiblePages(this.facultyPage, this.facultyTotalPages); },
+        get subjectVisiblePages() { return this.getVisiblePages(this.subjectPage, this.subjectTotalPages); },
+
+        getVisiblePages(current, total) {
+            const pages = [];
+            const start = Math.max(1, current - 2);
+            const end = Math.min(total, current + 2);
+            for (let i = start; i <= end; i++) pages.push(i);
+            return pages;
+        },
+
+        // Filtering + sorting logic
+        filterAndSort(data, sortState, type) {
+            let filtered = data;
+
+            // Year filter
+            if (this.filters.year) {
+                filtered = filtered.filter(item => {
+                    if (item.yearsList && item.yearsList.length > 0) {
+                        return item.yearsList.includes(this.filters.year);
+                    }
+                    return (item.years || '').includes(this.filters.year);
+                });
+            }
+
+            // Semester filter
+            if (this.filters.semester) {
+                filtered = filtered.filter(item => {
+                    if (item.semestersList && item.semestersList.length > 0) {
+                        return item.semestersList.includes(this.filters.semester);
+                    }
+                    return (item.semesters || '').toLowerCase().includes(this.filters.semester.toLowerCase());
+                });
+            }
+
+            // Search filter
+            if (this.filters.search) {
+                const q = this.filters.search.toLowerCase();
+                filtered = filtered.filter(item => {
+                    const searchable = [
+                        item.code || '', item.name || '', item.title || '',
+                        item.building || '', item.firstName || '', item.lastName || '',
+                        item.email || '', item.employeeId || ''
+                    ].join(' ').toLowerCase();
+                    return searchable.includes(q);
+                });
+            }
+
+            // Sort
+            if (sortState.field) {
+                filtered = [...filtered].sort((a, b) => {
+                    let valA = a[sortState.field];
+                    let valB = b[sortState.field];
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+                    if (valA < valB) return sortState.dir === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortState.dir === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            return filtered;
+        },
+
+        // Sort togglers
+        sortRooms(field) {
+            if (this.roomSort.field === field) {
+                this.roomSort.dir = this.roomSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.roomSort = { field, dir: 'asc' };
+            }
+            this.roomPage = 1;
+        },
+        sortFaculty(field) {
+            if (this.facultySort.field === field) {
+                this.facultySort.dir = this.facultySort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.facultySort = { field, dir: 'asc' };
+            }
+            this.facultyPage = 1;
+        },
+        sortSubjects(field) {
+            if (this.subjectSort.field === field) {
+                this.subjectSort.dir = this.subjectSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.subjectSort = { field, dir: 'asc' };
+            }
+            this.subjectPage = 1;
+        },
+
+        applyFilters() {
+            this.roomPage = 1;
+            this.facultyPage = 1;
+            this.subjectPage = 1;
+        },
+
+        clearFilters() {
+            this.filters = { year: '', semester: '', search: '' };
+            this.roomPage = 1;
+            this.facultyPage = 1;
+            this.subjectPage = 1;
+        },
+
+        exportPdfUrl(type) {
+            let url = '{{ path('department_head_reports_history') }}?export=' + type;
+            if (this.filters.year) url += '&year=' + encodeURIComponent(this.filters.year);
+            if (this.filters.semester) url += '&semester=' + encodeURIComponent(this.filters.semester);
+            if (this.filters.search) url += '&search=' + encodeURIComponent(this.filters.search);
+            return url;
+        }
+    };
+}
+</script>
 {% endblock %}

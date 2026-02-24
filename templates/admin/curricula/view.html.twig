@@ -3,51 +3,50 @@
 {% block main_content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
-    <div class="bg-white rounded-xl shadow-lg p-8 mb-8 border border-gray-200">
-        <div class="flex justify-between items-start">
-            <div class="flex-1">
-                <div class="flex items-center space-x-3 mb-3">
-                    <h1 class="text-3xl font-bold text-gray-900">{{ curriculum.name }}</h1>
+    <div class="mb-8">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                {% if curriculum.department and curriculum.department.id %}
+                    <a href="{{ path('admin_curricula_by_department', {departmentId: curriculum.department.id}) }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition shadow-sm mb-3">
+                        <i class="fas fa-arrow-left mr-2 text-xs"></i>Back to Curricula
+                    </a>
+                {% else %}
+                    <a href="{{ path('admin_curricula') }}" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition shadow-sm mb-3">
+                        <i class="fas fa-arrow-left mr-2 text-xs"></i>Back to Curricula
+                    </a>
+                {% endif %}
+                <div class="flex items-center space-x-3">
+                    <h1 class="text-2xl font-bold text-gray-900">{{ curriculum.name }}</h1>
                     {% if curriculum.isPublished %}
-                        <span class="px-3 py-1.5 bg-green-100 text-green-800 text-sm font-medium rounded-full">
-                            <i class="fas fa-check-circle mr-1"></i>Published
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            <span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>Published
                         </span>
                     {% else %}
-                        <span class="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-full">
-                            <i class="fas fa-edit mr-1"></i>Draft
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <span class="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1.5"></span>Draft
                         </span>
                     {% endif %}
                 </div>
-                <div class="flex items-center space-x-4 text-gray-600">
-                    <span><i class="fas fa-hashtag mr-1"></i>ID: {{ curriculum.id }}</span>
-                    <span><i class="fas fa-code-branch mr-1"></i>Version {{ curriculum.version ?? 1 }}</span>
-                </div>
+                <p class="mt-1 text-sm text-gray-500">
+                    ID: {{ curriculum.id }} &middot; Version {{ curriculum.version ?? 1 }}
+                </p>
             </div>
-            <div class="flex space-x-3">
-                <a href="{{ path('admin_curriculum_subjects', {id: curriculum.id}) }}" class="bg-green-600 text-white px-5 py-3 rounded-lg font-medium hover:bg-green-700 transition duration-150 shadow-md">
-                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center space-x-2">
+                <a href="{{ path('admin_curriculum_subjects', {id: curriculum.id}) }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition shadow-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                     </svg>
                     Manage Subjects
                 </a>
-                <button type="button" onclick="openUploadModal()" class="bg-blue-600 text-white px-5 py-3 rounded-lg font-medium hover:bg-blue-700 transition duration-150 shadow-md">
-                    <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <button type="button" onclick="openUploadModal()" class="inline-flex items-center px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition shadow-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    Upload Curriculum
+                    Upload
                 </button>
-                <a href="{{ path('admin_curricula_edit', {id: curriculum.id}) }}" class="bg-white text-orange-600 px-5 py-3 rounded-lg font-medium hover:bg-orange-50 transition duration-150 shadow-md">
-                    <i class="fas fa-edit mr-2"></i>Edit
+                <a href="{{ path('admin_curricula_edit', {id: curriculum.id}) }}" class="inline-flex items-center px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition shadow-sm">
+                    <i class="fas fa-pen mr-1.5 text-xs"></i>Edit
                 </a>
-                {% if curriculum.department and curriculum.department.id %}
-                    <a href="{{ path('admin_curricula_by_department', {departmentId: curriculum.department.id}) }}" class="bg-orange-800 text-white px-5 py-3 rounded-lg font-medium hover:bg-orange-900 transition duration-150 shadow-md">
-                        <i class="fas fa-arrow-left mr-2"></i>Back
-                    </a>
-                {% else %}
-                    <a href="{{ path('admin_curricula') }}" class="bg-orange-800 text-white px-5 py-3 rounded-lg font-medium hover:bg-orange-900 transition duration-150 shadow-md">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Curricula
-                    </a>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -66,29 +65,23 @@
         <!-- Main Content -->
         <div class="lg:col-span-2 space-y-6">
             <!-- Curriculum Information -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-orange-50 to-orange-100 px-6 py-4 border-b border-orange-200">
-                    <h2 class="text-xl font-bold text-orange-900">
-                        <i class="fas fa-info-circle mr-2"></i>Curriculum Details
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Curriculum Details</h2>
                 </div>
-                <div class="p-6 space-y-4">
+                <div class="p-6 space-y-5">
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-1">Curriculum Name</label>
-                        <p class="text-gray-900 text-lg">{{ curriculum.name }}</p>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Curriculum Name</label>
+                        <p class="text-gray-900">{{ curriculum.name }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-6">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Version</label>
-                            <p class="text-gray-900">
-                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                                    v{{ curriculum.version ?? 1 }}
-                                </span>
-                            </p>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Version</label>
+                            <p class="text-gray-900 font-medium">v{{ curriculum.version ?? 1 }}</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                            <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</label>
                             <p class="text-gray-900">
                                 {% if curriculum.isPublished %}
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -124,7 +117,7 @@
 
                     {% if curriculum.notes %}
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
+                        <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Notes</label>
                         <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <p class="text-gray-700 whitespace-pre-wrap">{{ curriculum.notes }}</p>
                         </div>
@@ -134,11 +127,9 @@
             </div>
 
             <!-- Department Information -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
-                    <h2 class="text-xl font-bold text-purple-900">
-                        <i class="fas fa-building mr-2"></i>Department & College
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Department & College</h2>
                 </div>
                 <div class="p-6">
                     {% set department = curriculum.department %}
@@ -146,11 +137,11 @@
                     
                     {# Display department and college information #}
                     {% if department %}
-                        <div class="space-y-4">
+                        <div class="space-y-3">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Department</label>
-                                <div class="flex items-center space-x-3">
-                                    <span class="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-medium rounded">
+                                <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Department</label>
+                                <div class="flex items-center">
+                                    <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-md border border-indigo-100">
                                         {{ department.name }}
                                     </span>
                                 </div>
@@ -168,18 +159,16 @@
             </div>
 
             <!-- Timeline -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
-                    <h2 class="text-xl font-bold text-blue-900">
-                        <i class="fas fa-clock mr-2"></i>Timeline
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100">
+                    <h2 class="text-base font-semibold text-gray-900">Timeline</h2>
                 </div>
                 <div class="p-6">
-                    <div class="space-y-4">
+                    <div class="space-y-5">
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-plus text-green-600"></i>
+                                <div class="w-8 h-8 bg-green-50 border border-green-200 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-plus text-green-500 text-xs"></i>
                                 </div>
                             </div>
                             <div class="ml-4">
@@ -190,8 +179,8 @@
 
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-edit text-blue-600"></i>
+                                <div class="w-8 h-8 bg-blue-50 border border-blue-200 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-edit text-blue-500 text-xs"></i>
                                 </div>
                             </div>
                             <div class="ml-4">
@@ -203,8 +192,8 @@
                         {% if curriculum.deletedAt %}
                         <div class="flex items-start">
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                                    <i class="fas fa-trash text-red-600"></i>
+                                <div class="w-8 h-8 bg-red-50 border border-red-200 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-trash text-red-500 text-xs"></i>
                                 </div>
                             </div>
                             <div class="ml-4">
@@ -221,20 +210,18 @@
         <!-- Sidebar -->
         <div class="lg:col-span-1 space-y-6">
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-4 border-b border-slate-600">
-                    <h2 class="text-lg font-bold text-white">
-                        <i class="fas fa-bolt mr-2"></i>Quick Actions
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="bg-indigo-600 px-5 py-3.5">
+                    <h2 class="text-sm font-semibold text-white uppercase tracking-wide">Actions</h2>
                 </div>
-                <div class="p-4 space-y-3">
-                    <a href="{{ path('admin_curricula_edit', {id: curriculum.id}) }}" class="block w-full bg-orange-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-700 transition duration-150 text-center">
-                        <i class="fas fa-edit mr-2"></i>Edit Curriculum
+                <div class="p-4 space-y-2.5">
+                    <a href="{{ path('admin_curricula_edit', {id: curriculum.id}) }}" class="block w-full bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition text-center">
+                        <i class="fas fa-pen mr-1.5 text-xs"></i>Edit Curriculum
                     </a>
 
                     <form method="post" action="{{ path('admin_curricula_toggle_publish', {id: curriculum.id}) }}" class="w-full">
                         <input type="hidden" name="_token" value="{{ csrf_token('toggle_publish_curriculum_' ~ curriculum.id) }}">
-                        <button type="submit" class="w-full {% if curriculum.isPublished %}bg-yellow-600 hover:bg-yellow-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white px-4 py-3 rounded-lg font-medium transition duration-150">
+                        <button type="submit" class="w-full border {% if curriculum.isPublished %}border-amber-300 text-amber-700 hover:bg-amber-50{% else %}border-green-300 text-green-700 hover:bg-green-50{% endif %} bg-white px-4 py-2.5 rounded-lg text-sm font-medium transition">
                             <i class="fas {% if curriculum.isPublished %}fa-times-circle{% else %}fa-check-circle{% endif %} mr-2"></i>
                             {% if curriculum.isPublished %}Unpublish{% else %}Publish{% endif %}
                         </button>
@@ -242,7 +229,7 @@
 
                     <form method="post" action="{{ path('admin_curricula_delete', {id: curriculum.id}) }}" class="w-full" onsubmit="return confirm('Are you sure you want to delete this curriculum? This action cannot be undone.');">
                         <input type="hidden" name="_token" value="{{ csrf_token('delete_curriculum_' ~ curriculum.id) }}">
-                        <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-red-700 transition duration-150">
+                        <button type="submit" class="w-full border border-red-200 bg-white text-red-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-red-50 transition">
                             <i class="fas fa-trash mr-2"></i>Delete Curriculum
                         </button>
                     </form>
@@ -250,47 +237,38 @@
             </div>
 
             <!-- Statistics -->
-            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 border-b border-indigo-500">
-                    <h2 class="text-lg font-bold text-white">
-                        <i class="fas fa-chart-bar mr-2"></i>Statistics
-                    </h2>
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-3.5 border-b border-gray-100">
+                    <h2 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Statistics</h2>
                 </div>
-                <div class="p-4 space-y-4">
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Curriculum ID</span>
-                            <span class="text-lg font-bold text-gray-900">#{{ curriculum.id }}</span>
-                        </div>
+                <div class="p-4 space-y-3">
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-gray-500">Curriculum ID</span>
+                        <span class="text-sm font-semibold text-gray-900">#{{ curriculum.id }}</span>
                     </div>
-
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Version</span>
-                            <span class="text-lg font-bold text-gray-900">{{ curriculum.version ?? 1 }}</span>
-                        </div>
+                    <div class="border-t border-gray-100"></div>
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-gray-500">Version</span>
+                        <span class="text-sm font-semibold text-gray-900">{{ curriculum.version ?? 1 }}</span>
                     </div>
-
-                    <div class="bg-gray-50 rounded-lg p-4">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Status</span>
-                            <span class="text-lg font-bold {% if curriculum.isPublished %}text-green-600{% else %}text-yellow-600{% endif %}">
-                                {% if curriculum.isPublished %}Published{% else %}Draft{% endif %}
-                            </span>
-                        </div>
+                    <div class="border-t border-gray-100"></div>
+                    <div class="flex items-center justify-between py-2">
+                        <span class="text-sm text-gray-500">Status</span>
+                        <span class="text-sm font-semibold {% if curriculum.isPublished %}text-green-600{% else %}text-yellow-600{% endif %}">
+                            {% if curriculum.isPublished %}Published{% else %}Draft{% endif %}
+                        </span>
                     </div>
                 </div>
             </div>
 
             <!-- Information -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <div class="flex">
                     <div class="flex-shrink-0">
-                        <i class="fas fa-info-circle text-blue-600"></i>
+                        <i class="fas fa-info-circle text-gray-400"></i>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-semibold text-blue-800 mb-1">About Curricula</h3>
-                        <p class="text-sm text-blue-700">
+                        <p class="text-xs text-gray-500">
                             Curricula define the course structure and requirements for specific academic programs within departments.
                         </p>
                     </div>
@@ -300,21 +278,16 @@
     </div>
 
     <!-- Curriculum Subjects Section -->
-    <div class="mt-8">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
+    <div class="mt-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-purple-900">
-                        <svg class="w-6 h-6 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                        </svg>
-                        Curriculum Subjects
-                    </h2>
+                    <h2 class="text-base font-semibold text-gray-900">Curriculum Subjects</h2>
                     <div class="flex items-center space-x-2">
-                        <span class="px-3 py-1 bg-purple-200 text-purple-800 text-sm font-semibold rounded-full">
+                        <span class="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
                             {{ curriculum.totalSubjects ?? 0 }} Subjects
                         </span>
-                        <span class="px-3 py-1 bg-purple-200 text-purple-800 text-sm font-semibold rounded-full">
+                        <span class="px-2.5 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
                             {{ curriculum.totalUnits ?? 0 }} Units
                         </span>
                     </div>
@@ -326,20 +299,14 @@
                     <!-- Display by Terms -->
                     <div class="space-y-6">
                         {% for term in terms %}
-                            <div class="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-lg font-bold text-purple-900">
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <div class="bg-gray-50 px-5 py-3 flex items-center justify-between">
+                                    <h3 class="text-sm font-semibold text-gray-900">
                                         {{ term.displayName }}
                                     </h3>
-                                    <div class="flex items-center space-x-2">
-                                        <span class="text-sm text-purple-700">
-                                            {{ term.curriculumSubjects|length }} subjects
-                                        </span>
-                                        <span class="text-sm text-purple-700">•</span>
-                                        <span class="text-sm text-purple-700">
-                                            {{ term.getTotalUnits() }} units
-                                        </span>
-                                    </div>
+                                    <span class="text-xs text-gray-500">
+                                        {{ term.curriculumSubjects|length }} subjects &middot; {{ term.getTotalUnits() }} units
+                                    </span>
                                 </div>
 
                                 {% if term.curriculumSubjects is not empty %}
@@ -361,13 +328,13 @@
                                                     {% set subject = curriculumSubject.subject %}
                                                     <tr class="hover:bg-gray-50 transition">
                                                         <td class="px-4 py-3 whitespace-nowrap">
-                                                            <span class="text-sm font-semibold text-purple-700">{{ subject.code }}</span>
+                                                            <span class="text-sm font-medium text-gray-900">{{ subject.code }}</span>
                                                         </td>
                                                         <td class="px-4 py-3">
                                                             <div class="text-sm font-medium text-gray-900">{{ subject.title }}</div>
                                                         </td>
                                                         <td class="px-4 py-3 text-center whitespace-nowrap">
-                                                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">{{ subject.units }}</span>
+                                                            <span class="px-2 py-0.5 bg-gray-100 text-gray-800 text-xs font-medium rounded">{{ subject.units }}</span>
                                                         </td>
                                                         <td class="px-4 py-3 text-center whitespace-nowrap">
                                                             <span class="text-sm text-gray-700">{{ subject.lectureHours }}h</span>

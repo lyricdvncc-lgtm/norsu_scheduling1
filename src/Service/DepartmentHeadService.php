@@ -1044,13 +1044,14 @@ class DepartmentHeadService
                         $scheduleTime = $schedule->getDayPattern();
                     }
                     if ($schedule->getStartTime() && $schedule->getEndTime()) {
-                        $scheduleTime .= ' ' . $schedule->getStartTime()->format('H:i') . '-' . $schedule->getEndTime()->format('H:i');
+                        $scheduleTime .= ' ' . $schedule->getStartTime()->format('g:i A') . '-' . $schedule->getEndTime()->format('g:i A');
                     }
                     
                     $courses[] = [
                         'code' => $subject->getCode() ?? 'N/A',
                         'name' => $subject->getTitle() ?? 'Untitled',
                         'units' => $subject->getUnits() ?? 0,
+                        'section' => $schedule->getSection() ?? null,
                         'schedule' => $scheduleTime ?: 'TBA',
                         'room' => $schedule->getRoom() ? $schedule->getRoom()->getCode() : null,
                     ];

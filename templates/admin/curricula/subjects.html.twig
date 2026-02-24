@@ -65,7 +65,7 @@
     <div class="mb-8">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl">Manage Subjects</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Manage Subjects</h1>
                 <p class="mt-2 text-sm text-gray-600">{{ curriculum.name }} - {{ curriculum.getDisplayName() }}</p>
             </div>
             <div class="flex space-x-3">
@@ -99,8 +99,8 @@
                     <p class="text-sm font-medium text-gray-600">Total Terms</p>
                     <p class="text-3xl font-bold text-gray-900 mt-2">{{ statistics.total_terms }}</p>
                 </div>
-                <div class="p-3 bg-blue-100 rounded-lg">
-                    <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-3 bg-indigo-50 rounded-lg">
+                    <svg class="h-8 w-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
@@ -112,10 +112,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Subjects</p>
-                    <p class="text-3xl font-bold text-green-600 mt-2">{{ statistics.total_subjects }}</p>
+                    <p class="text-3xl font-bold text-indigo-600 mt-2">{{ statistics.total_subjects }}</p>
                 </div>
-                <div class="p-3 bg-green-100 rounded-lg">
-                    <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-3 bg-indigo-50 rounded-lg">
+                    <svg class="h-8 w-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                     </svg>
                 </div>
@@ -127,10 +127,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">Total Units</p>
-                    <p class="text-3xl font-bold text-orange-600 mt-2">{{ statistics.total_units }}</p>
+                    <p class="text-3xl font-bold text-gray-900 mt-2">{{ statistics.total_units }}</p>
                 </div>
-                <div class="p-3 bg-orange-100 rounded-lg">
-                    <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-3 bg-indigo-50 rounded-lg">
+                    <svg class="h-8 w-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
                 </div>
@@ -143,8 +143,8 @@
         <div class="flex flex-wrap gap-3">
             <button type="button" 
                     onclick="openGenerateTermsModal()"
-                    class="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium rounded-lg shadow-sm transition duration-150">
-                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="inline-flex items-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Generate Default Terms
@@ -152,8 +152,8 @@
             
             <button type="button" 
                     onclick="openAddTermModal()"
-                    class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-sm transition duration-150">
-                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 Add Custom Term
@@ -161,8 +161,8 @@
 
             <button type="button" 
                     onclick="openDirectAddSubjectModal()"
-                    class="inline-flex items-center px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white text-base font-medium rounded-lg shadow-sm transition duration-150">
-                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                 </svg>
                 Add Subject
@@ -170,8 +170,8 @@
 
             <button type="button" 
                     onclick="openUploadCurriculumModal()"
-                    class="inline-flex items-center px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white text-base font-medium rounded-lg shadow-sm transition duration-150">
-                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="inline-flex items-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 shadow-sm transition">
+                <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
                 Upload Curriculum
@@ -193,19 +193,19 @@
             {% for term in terms %}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden term-card" data-semester="{{ term.semester }}">
                     <!-- Term Header -->
-                    <div class="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4">
+                    <div class="border-l-4 border-l-indigo-400 bg-gray-50 border-b px-6 py-4">
                         <div class="flex items-center justify-between">
                             <div>
-                                <h3 class="text-xl font-bold text-white">{{ term.getDisplayName() }}</h3>
-                                <p class="text-orange-100 text-sm mt-1">
-                                    {{ term.curriculumSubjects|length }} subject(s) • {{ term.getTotalUnits() }} units
+                                <h3 class="text-base font-semibold text-gray-900">{{ term.getDisplayName() }}</h3>
+                                <p class="text-gray-500 text-sm mt-0.5">
+                                    {{ term.curriculumSubjects|length }} subject(s) &middot; {{ term.getTotalUnits() }} units
                                 </p>
                             </div>
                             <div class="flex space-x-2">
                                 <button type="button"
                                         onclick="openAddSubjectModal({{ term.id }})"
-                                        class="bg-white text-orange-600 px-4 py-2 rounded-lg font-medium hover:bg-orange-50 transition duration-150 shadow-sm">
-                                    <svg class="w-5 h-5 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        class="bg-white text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition shadow-sm">
+                                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                     </svg>
                                     Add Subject
@@ -215,7 +215,7 @@
                                       class="inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete_term_' ~ term.id) }}">
                                     <button type="submit"
-                                            class="bg-red-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-600 transition duration-150 shadow-sm">
+                                            class="text-red-500 border border-red-200 bg-white px-2 py-1.5 rounded-lg hover:bg-red-50 transition shadow-sm">
                                         <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
@@ -235,7 +235,7 @@
                                 <p class="mt-2 text-sm text-gray-500">No subjects added to this term yet.</p>
                                 <button type="button"
                                         onclick="openAddSubjectModal({{ term.id }})"
-                                        class="mt-3 inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition">
+                                        class="mt-3 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                     </svg>
@@ -269,7 +269,7 @@
                                                     {% endif %}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
                                                         {{ subject.units }} units
                                                     </span>
                                                 </td>
@@ -279,11 +279,11 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     {% if subject.type == 'lecture' %}
-                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">Lecture</span>
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Lecture</span>
                                                     {% elseif subject.type == 'laboratory' %}
-                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Laboratory</span>
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">Laboratory</span>
                                                     {% else %}
-                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Lecture+Lab</span>
+                                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700">Lecture+Lab</span>
                                                     {% endif %}
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -322,7 +322,7 @@
                     
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Number of Years</label>
-                        <select name="years" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                        <select name="years" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="4">4 Years</option>
                             <option value="5">5 Years</option>
                             <option value="6">6 Years</option>
@@ -361,14 +361,14 @@
                                min="1" 
                                max="6" 
                                required
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
 
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Semester</label>
                         <select name="semester" 
                                 required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="1st">1st Semester</option>
                             <option value="2nd">2nd Semester</option>
                             <option value="summer">Summer</option>
@@ -380,7 +380,7 @@
                         <input type="text" 
                                name="term_name" 
                                placeholder="e.g., Special Term"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
 
                     <div class="flex justify-end space-x-3">
@@ -584,7 +584,7 @@
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-6 border-b border-gray-200">
                 <div>
-                    <h3 class="text-2xl font-bold text-orange-600">Upload Curriculum</h3>
+                    <h3 class="text-2xl font-bold text-indigo-600">Upload Curriculum</h3>
                     <p class="text-sm text-gray-600 mt-1">Import subjects from Excel or CSV file</p>
                 </div>
                 <button onclick="closeUploadCurriculumModal()" class="text-gray-400 hover:text-gray-600 transition">
@@ -637,7 +637,7 @@
 
                 <!-- File Upload Area -->
                 <form id="uploadCurriculumForm" enctype="multipart/form-data">
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-orange-500 transition">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition">
                         <input type="file" 
                                id="curriculumFile" 
                                name="curriculum_file"
@@ -654,10 +654,10 @@
                         </label>
 
                         <!-- Selected File Info -->
-                        <div id="fileInfo" class="hidden mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div id="fileInfo" class="hidden mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center">
-                                    <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="h-8 w-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                     </svg>
                                     <div class="ml-3 text-left">
@@ -679,12 +679,12 @@
                     <!-- Upload Options -->
                     <div class="mt-6 space-y-3">
                         <label class="flex items-center">
-                            <input type="checkbox" name="validate_only" id="validateOnly" class="h-4 w-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                            <input type="checkbox" name="validate_only" id="validateOnly" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                             <span class="ml-2 text-sm text-gray-700">Validate only (don't save to database)</span>
                         </label>
                         
                         <label class="flex items-center">
-                            <input type="checkbox" name="auto_create_terms" id="autoCreateTerms" checked class="h-4 w-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500">
+                            <input type="checkbox" name="auto_create_terms" id="autoCreateTerms" checked class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
                             <span class="ml-2 text-sm text-gray-700">Automatically create terms based on year level and semester</span>
                         </label>
                     </div>
@@ -693,7 +693,7 @@
                 <!-- Upload Progress -->
                 <div id="uploadProgress" class="hidden mt-6">
                     <div class="bg-gray-200 rounded-full h-2.5">
-                        <div id="progressBar" class="bg-orange-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
                     <p id="progressText" class="text-sm text-gray-600 text-center mt-2">Uploading...</p>
                 </div>
@@ -710,7 +710,7 @@
                         onclick="uploadCurriculum()"
                         id="uploadButton"
                         disabled
-                        class="px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="flex items-center">
                         <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>

@@ -5,11 +5,15 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Entity\College;
 use App\Entity\ActivityLog;
+use App\Entity\Schedule;
+use App\Entity\Room;
+use App\Entity\AcademicYear;
 use App\Form\UserFormType;
 use App\Form\UserEditFormType;
 use App\Form\CollegeFormType;
 use App\Repository\CollegeRepository;
 use App\Repository\DepartmentRepository;
+use App\Repository\AcademicYearRepository;
 use App\Service\DashboardService;
 use App\Service\UserService;
 use App\Service\CollegeService;
@@ -35,6 +39,7 @@ class AdminController extends AbstractController
     private DepartmentRepository $departmentRepository;
     private EntityManagerInterface $entityManager;
     private SystemSettingsService $systemSettingsService;
+    private AcademicYearRepository $academicYearRepository;
 
     public function __construct(
         DashboardService $dashboardService, 
@@ -44,7 +49,8 @@ class AdminController extends AbstractController
         CollegeRepository $collegeRepository,
         DepartmentRepository $departmentRepository,
         EntityManagerInterface $entityManager,
-        SystemSettingsService $systemSettingsService
+        SystemSettingsService $systemSettingsService,
+        AcademicYearRepository $academicYearRepository
     ) {
         $this->dashboardService = $dashboardService;
         $this->userService = $userService;
@@ -54,6 +60,7 @@ class AdminController extends AbstractController
         $this->departmentRepository = $departmentRepository;
         $this->entityManager = $entityManager;
         $this->systemSettingsService = $systemSettingsService;
+        $this->academicYearRepository = $academicYearRepository;
     }
 
     private function getBaseTemplateData(): array
@@ -1854,6 +1861,446 @@ class AdminController extends AbstractController
         return $this->redirectToRoute('admin_users_all');
     }
 
+    #[Route('/reports/faculty-workload', name: 'reports_faculty_workload')]
+    public function facultyWorkloadReport(Request $request): Response
+    {
+        $departments = $this->departmentRepository->findBy(['isActive' => true], ['name' => 'ASC']);
+        $academicYears = $this->academicYearRepository->findBy([], ['year' => 'DESC']);
+
+        $departmentId = $request->query->get('department');
+        $academicYearId = $request->query->get('academic_year');
+        $semester = $request->query->get('semester');
+
+        // Get active defaults
+        $activeYear = $this->systemSettingsService->getActiveAcademicYear();
+        $activeSemester = $this->systemSettingsService->getActiveSemester();
+
+        if (!$academicYearId && $activeYear) {
+            $academicYearId = (string) $activeYear->getId();
+        }
+        if (!$semester && $activeSemester) {
+            $semester = $activeSemester;
+        }
+
+        // Build faculty query
+        $qb = $this->entityManager->getRepository(User::class)->createQueryBuilder('u')
+            ->where('u.role = :role')
+            ->andWhere('u.isActive = :active')
+            ->setParameter('role', 3)
+            ->setParameter('active', true)
+            ->orderBy('u.lastName', 'ASC');
+
+        if ($departmentId) {
+            $qb->andWhere('u.department = :dept')->setParameter('dept', $departmentId);
+        }
+
+        $faculty = $qb->getQuery()->getResult();
+
+        $standardLoad = 21;
+        $totalUnits = 0;
+        $overloaded = 0;
+        $optimal = 0;
+        $underloaded = 0;
+        $facultyWorkload = [];
+
+        foreach ($faculty as $fac) {
+            $sqb = $this->entityManager->createQueryBuilder()
+                ->select('s', 'sub', 'r')
+                ->from(Schedule::class, 's')
+                ->leftJoin('s.subject', 'sub')
+                ->leftJoin('s.room', 'r')
+                ->where('s.faculty = :faculty')
+                ->andWhere('s.status = :status')
+                ->setParameter('faculty', $fac)
+                ->setParameter('status', 'active');
+
+            if ($academicYearId) {
+                $ay = $this->academicYearRepository->find($academicYearId);
+                if ($ay) {
+                    $sqb->andWhere('s.academicYear = :ay')->setParameter('ay', $ay);
+                }
+            }
+            if ($semester) {
+                $sqb->andWhere('s.semester = :sem')->setParameter('sem', $semester);
+            }
+
+            $schedules = $sqb->getQuery()->getResult();
+
+            $units = 0;
+            $courses = [];
+            foreach ($schedules as $schedule) {
+                $subject = $schedule->getSubject();
+                if ($subject) {
+                    $units += $subject->getUnits();
+                    $scheduleTime = '';
+                    if ($schedule->getDayPattern()) $scheduleTime = $schedule->getDayPattern();
+                    if ($schedule->getStartTime() && $schedule->getEndTime()) {
+                        $scheduleTime .= ' ' . $schedule->getStartTime()->format('g:i A') . '-' . $schedule->getEndTime()->format('g:i A');
+                    }
+                    $courses[] = [
+                        'code' => $subject->getCode() ?? 'N/A',
+                        'name' => $subject->getTitle() ?? 'Untitled',
+                        'units' => $subject->getUnits() ?? 0,
+                        'section' => $schedule->getSection() ?? null,
+                        'schedule' => $scheduleTime ?: 'TBA',
+                        'room' => $schedule->getRoom() ? $schedule->getRoom()->getCode() : null,
+                    ];
+                }
+            }
+
+            $status = 'optimal';
+            $statusColor = 'green';
+            if ($units > $standardLoad) {
+                $status = 'overloaded';
+                $statusColor = 'red';
+                $overloaded++;
+            } elseif ($units < 15) {
+                $status = 'underloaded';
+                $statusColor = 'yellow';
+                $underloaded++;
+            } else {
+                $optimal++;
+            }
+
+            $totalUnits += $units;
+
+            $facultyWorkload[] = [
+                'id' => $fac->getId(),
+                'name' => $fac->getFirstName() . ' ' . $fac->getLastName(),
+                'email' => $fac->getEmail(),
+                'department' => $fac->getDepartment() ? $fac->getDepartment()->getName() : 'Unassigned',
+                'units' => $units,
+                'percentage' => ($units / $standardLoad) * 100,
+                'status' => $status,
+                'status_color' => $statusColor,
+                'courses' => $courses,
+                'course_count' => count($courses),
+            ];
+        }
+
+        usort($facultyWorkload, fn($a, $b) => $b['units'] <=> $a['units']);
+
+        $statistics = [
+            'total_faculty' => count($faculty),
+            'overloaded' => $overloaded,
+            'optimal' => $optimal,
+            'underloaded' => $underloaded,
+            'average_load' => count($faculty) > 0 ? round($totalUnits / count($faculty), 2) : 0,
+            'total_units' => $totalUnits,
+            'standard_load' => $standardLoad,
+        ];
+
+        return $this->render('admin/reports/faculty_workload.html.twig', array_merge($this->getBaseTemplateData(), [
+            'page_title' => 'Faculty Workload Report',
+            'workload_data' => $facultyWorkload,
+            'statistics' => $statistics,
+            'academic_years' => $academicYears,
+            'departments' => $departments,
+            'selected_academic_year' => $academicYearId,
+            'selected_semester' => $semester,
+            'selected_department' => $departmentId,
+        ]));
+    }
+
+    #[Route('/reports/faculty-workload/json', name: 'reports_faculty_workload_json', methods: ['GET'])]
+    public function facultyWorkloadJson(Request $request): JsonResponse
+    {
+        $departmentId = $request->query->get('department');
+        $academicYearId = $request->query->get('academic_year');
+        $semester = $request->query->get('semester');
+
+        $qb = $this->entityManager->getRepository(User::class)->createQueryBuilder('u')
+            ->where('u.role = :role')
+            ->andWhere('u.isActive = :active')
+            ->setParameter('role', 3)
+            ->setParameter('active', true)
+            ->orderBy('u.lastName', 'ASC');
+
+        if ($departmentId) {
+            $qb->andWhere('u.department = :dept')->setParameter('dept', $departmentId);
+        }
+
+        $faculty = $qb->getQuery()->getResult();
+
+        $standardLoad = 21;
+        $totalUnits = 0;
+        $overloaded = 0;
+        $optimal = 0;
+        $underloaded = 0;
+        $facultyList = [];
+
+        foreach ($faculty as $fac) {
+            $sqb = $this->entityManager->createQueryBuilder()
+                ->select('s', 'sub', 'r')
+                ->from(Schedule::class, 's')
+                ->leftJoin('s.subject', 'sub')
+                ->leftJoin('s.room', 'r')
+                ->where('s.faculty = :faculty')
+                ->andWhere('s.status = :status')
+                ->setParameter('faculty', $fac)
+                ->setParameter('status', 'active');
+
+            if ($academicYearId) {
+                $ay = $this->academicYearRepository->find($academicYearId);
+                if ($ay) {
+                    $sqb->andWhere('s.academicYear = :ay')->setParameter('ay', $ay);
+                }
+            }
+            if ($semester) {
+                $sqb->andWhere('s.semester = :sem')->setParameter('sem', $semester);
+            }
+
+            $schedules = $sqb->getQuery()->getResult();
+
+            $units = 0;
+            $courses = [];
+            foreach ($schedules as $schedule) {
+                $subject = $schedule->getSubject();
+                if ($subject) {
+                    $units += $subject->getUnits();
+                    $scheduleTime = '';
+                    if ($schedule->getDayPattern()) $scheduleTime = $schedule->getDayPattern();
+                    if ($schedule->getStartTime() && $schedule->getEndTime()) {
+                        $scheduleTime .= ' ' . $schedule->getStartTime()->format('g:i A') . '-' . $schedule->getEndTime()->format('g:i A');
+                    }
+                    $courses[] = [
+                        'code' => $subject->getCode() ?? 'N/A',
+                        'name' => $subject->getTitle() ?? 'Untitled',
+                        'units' => $subject->getUnits() ?? 0,
+                        'section' => $schedule->getSection() ?? null,
+                        'schedule' => $scheduleTime ?: 'TBA',
+                        'room' => $schedule->getRoom() ? $schedule->getRoom()->getCode() : null,
+                    ];
+                }
+            }
+
+            $status = 'optimal';
+            $statusColor = 'green';
+            if ($units > $standardLoad) {
+                $status = 'overloaded'; $statusColor = 'red'; $overloaded++;
+            } elseif ($units < 15) {
+                $status = 'underloaded'; $statusColor = 'yellow'; $underloaded++;
+            } else {
+                $optimal++;
+            }
+
+            $totalUnits += $units;
+            $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), explode(' ', $fac->getFirstName() . ' ' . $fac->getLastName())));
+
+            $facultyList[] = [
+                'id' => $fac->getId(),
+                'name' => $fac->getFirstName() . ' ' . $fac->getLastName(),
+                'email' => $fac->getEmail(),
+                'department' => $fac->getDepartment() ? $fac->getDepartment()->getName() : 'Unassigned',
+                'initials' => $initials,
+                'units' => $units,
+                'percentage' => round(($units / $standardLoad) * 100, 1),
+                'status' => $status,
+                'status_color' => $statusColor,
+                'course_count' => count($courses),
+                'courses' => $courses,
+            ];
+        }
+
+        return new JsonResponse([
+            'faculty' => $facultyList,
+            'statistics' => [
+                'total_faculty' => count($faculty),
+                'overloaded' => $overloaded,
+                'optimal' => $optimal,
+                'underloaded' => $underloaded,
+                'average_load' => count($faculty) > 0 ? round($totalUnits / count($faculty), 2) : 0,
+                'total_units' => $totalUnits,
+                'standard_load' => $standardLoad,
+            ],
+            'selected_academic_year' => $academicYearId,
+            'selected_semester' => $semester,
+        ]);
+    }
+
+    #[Route('/reports/room-utilization', name: 'reports_room_utilization')]
+    public function roomUtilizationReport(Request $request): Response
+    {
+        $departments = $this->departmentRepository->findBy(['isActive' => true], ['name' => 'ASC']);
+        $academicYears = $this->academicYearRepository->findBy([], ['year' => 'DESC']);
+
+        $activeYear = $this->systemSettingsService->getActiveAcademicYear();
+        $activeSemester = $this->systemSettingsService->getActiveSemester();
+
+        return $this->render('admin/reports/room_utilization.html.twig', array_merge($this->getBaseTemplateData(), [
+            'page_title' => 'Room Utilization Report',
+            'academic_years' => $academicYears,
+            'departments' => $departments,
+            'active_year' => $activeYear,
+            'active_semester' => $activeSemester,
+        ]));
+    }
+
+    #[Route('/reports/room-utilization/json', name: 'reports_room_utilization_json', methods: ['GET'])]
+    public function roomUtilizationJson(Request $request): JsonResponse
+    {
+        $departmentId = $request->query->get('department');
+        $academicYearId = $request->query->get('academic_year');
+        $semester = $request->query->get('semester');
+
+        // Build schedule query
+        $qb = $this->entityManager->getRepository(Schedule::class)
+            ->createQueryBuilder('s')
+            ->select('s', 'r', 'sub', 'u')
+            ->leftJoin('s.room', 'r')
+            ->leftJoin('s.subject', 'sub')
+            ->leftJoin('s.faculty', 'u')
+            ->where('s.status = :status')
+            ->setParameter('status', 'active');
+
+        if ($departmentId) {
+            $qb->andWhere('sub.department = :dept')->setParameter('dept', $departmentId);
+        }
+        if ($academicYearId) {
+            $qb->andWhere('s.academicYear = :ay')->setParameter('ay', $academicYearId);
+        }
+        if ($semester) {
+            $qb->andWhere('s.semester = :sem')->setParameter('sem', $semester);
+        }
+
+        $schedules = $qb->getQuery()->getResult();
+
+        // Get rooms
+        $rqb = $this->entityManager->getRepository(Room::class)
+            ->createQueryBuilder('r')
+            ->where('r.isActive = :active')
+            ->setParameter('active', true)
+            ->orderBy('r.building', 'ASC')
+            ->addOrderBy('r.code', 'ASC');
+
+        if ($departmentId) {
+            $rqb->andWhere('r.department = :dept')->setParameter('dept', $departmentId);
+        }
+
+        $rooms = $rqb->getQuery()->getResult();
+
+        // Build room utilization data
+        $roomData = [];
+        $totalSlots = 0;
+        $usedSlots = 0;
+        $roomTypes = [];
+        $buildingStats = [];
+        $maxSlotsPerRoom = 84; // 14 hours * 6 days
+
+        foreach ($rooms as $room) {
+            $roomSchedules = array_filter($schedules, fn($s) => $s->getRoom() && $s->getRoom()->getId() === $room->getId());
+
+            $hoursUsed = 0;
+            $scheduleDetails = [];
+            $daySlots = ['Mon' => [], 'Tue' => [], 'Wed' => [], 'Thu' => [], 'Fri' => [], 'Sat' => []];
+
+            foreach ($roomSchedules as $schedule) {
+                $start = $schedule->getStartTime();
+                $end = $schedule->getEndTime();
+                if ($start && $end) {
+                    $diff = $start->diff($end);
+                    $hours = $diff->h + ($diff->i / 60);
+
+                    $dayMap = ['M' => 'Mon', 'T' => 'Tue', 'W' => 'Wed', 'Th' => 'Thu', 'F' => 'Fri', 'S' => 'Sat'];
+                    $days = [];
+                    $pattern = $schedule->getDayPattern() ?? '';
+                    while (strlen($pattern) > 0) {
+                        if (str_starts_with($pattern, 'Th')) {
+                            $days[] = 'Thu'; $pattern = substr($pattern, 2);
+                        } elseif (isset($dayMap[$pattern[0]])) {
+                            $days[] = $dayMap[$pattern[0]]; $pattern = substr($pattern, 1);
+                        } else {
+                            $pattern = substr($pattern, 1);
+                        }
+                    }
+                    $hoursUsed += $hours * count($days);
+
+                    foreach ($days as $day) {
+                        $daySlots[$day][] = ['start' => $start->format('H:i'), 'end' => $end->format('H:i')];
+                    }
+
+                    $scheduleDetails[] = [
+                        'subject_code' => $schedule->getSubject() ? $schedule->getSubject()->getCode() : 'N/A',
+                        'subject_title' => $schedule->getSubject() ? $schedule->getSubject()->getTitle() : '',
+                        'section' => $schedule->getSection(),
+                        'faculty' => $schedule->getFaculty() ? $schedule->getFaculty()->getFirstName() . ' ' . $schedule->getFaculty()->getLastName() : 'TBA',
+                        'day_pattern' => $schedule->getDayPattern(),
+                        'time' => $start->format('g:i A') . ' - ' . $end->format('g:i A'),
+                        'enrolled' => $schedule->getEnrolledStudents(),
+                    ];
+                }
+            }
+
+            $utilizationPercent = $maxSlotsPerRoom > 0 ? round(($hoursUsed / $maxSlotsPerRoom) * 100, 1) : 0;
+            $utilizationPercent = min($utilizationPercent, 100);
+            $totalSlots += $maxSlotsPerRoom;
+            $usedSlots += $hoursUsed;
+
+            if (count($roomSchedules) === 0) {
+                $status = 'unused'; $statusLabel = 'Unused'; $statusColor = 'gray';
+            } elseif ($utilizationPercent >= 75) {
+                $status = 'high'; $statusLabel = 'High Usage'; $statusColor = 'red';
+            } elseif ($utilizationPercent >= 40) {
+                $status = 'moderate'; $statusLabel = 'Moderate'; $statusColor = 'green';
+            } else {
+                $status = 'low'; $statusLabel = 'Low Usage'; $statusColor = 'yellow';
+            }
+
+            $type = $room->getType() ?? 'classroom';
+            $building = $room->getBuilding() ?? 'Unknown';
+
+            if (!isset($roomTypes[$type])) $roomTypes[$type] = ['total' => 0, 'used' => 0, 'hours' => 0];
+            $roomTypes[$type]['total']++;
+            if (count($roomSchedules) > 0) $roomTypes[$type]['used']++;
+            $roomTypes[$type]['hours'] += $hoursUsed;
+
+            if (!isset($buildingStats[$building])) $buildingStats[$building] = ['total' => 0, 'used' => 0, 'hours' => 0];
+            $buildingStats[$building]['total']++;
+            if (count($roomSchedules) > 0) $buildingStats[$building]['used']++;
+            $buildingStats[$building]['hours'] += $hoursUsed;
+
+            $roomData[] = [
+                'id' => $room->getId(),
+                'code' => $room->getCode(),
+                'name' => $room->getName() ?? $room->getCode(),
+                'building' => $building,
+                'floor' => $room->getFloor(),
+                'type' => $type,
+                'capacity' => $room->getCapacity(),
+                'department' => $room->getDepartment() ? $room->getDepartment()->getName() : 'Shared',
+                'schedule_count' => count($roomSchedules),
+                'hours_used' => round($hoursUsed, 1),
+                'utilization' => $utilizationPercent,
+                'status' => $status,
+                'status_label' => $statusLabel,
+                'status_color' => $statusColor,
+                'schedules' => $scheduleDetails,
+                'day_slots' => $daySlots,
+            ];
+        }
+
+        $totalRooms = count($rooms);
+        $usedRooms = count(array_filter($roomData, fn($r) => $r['schedule_count'] > 0));
+        $overallUtilization = $totalSlots > 0 ? round(($usedSlots / $totalSlots) * 100, 1) : 0;
+
+        return new JsonResponse([
+            'rooms' => $roomData,
+            'statistics' => [
+                'total_rooms' => $totalRooms,
+                'used_rooms' => $usedRooms,
+                'unused_rooms' => $totalRooms - $usedRooms,
+                'overall_utilization' => $overallUtilization,
+                'avg_schedules_per_room' => $totalRooms > 0 ? round(array_sum(array_column($roomData, 'schedule_count')) / $totalRooms, 1) : 0,
+                'high_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'high')),
+                'moderate_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'moderate')),
+                'low_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'low')),
+                'unused' => count(array_filter($roomData, fn($r) => $r['status'] === 'unused')),
+            ],
+            'room_types' => $roomTypes,
+            'building_stats' => $buildingStats,
+        ]);
+    }
+
     #[Route('/history', name: 'history', methods: ['GET'])]
     public function historyHub(Request $request): Response
     {
@@ -2573,6 +3020,12 @@ class AdminController extends AbstractController
     #[Route('/users/create', name: 'users_create')]
     public function createUser(Request $request): Response
     {
+        // DEBUG: Log every request to this endpoint
+        $debugId = uniqid('create_user_', true);
+        $isAjax = $request->isXmlHttpRequest();
+        $method = $request->getMethod();
+        error_log("[DEBUG $debugId] createUser called - Method: $method, isAjax: " . ($isAjax ? 'YES' : 'NO') . ", Content-Type: " . $request->headers->get('Content-Type') . ", X-Requested-With: " . $request->headers->get('X-Requested-With'));
+        
         // Ensure session is started
         if (!$request->getSession()->isStarted()) {
             $request->getSession()->start();
@@ -2592,8 +3045,12 @@ class AdminController extends AbstractController
         $form = $this->createForm(UserFormType::class, $user, ['is_edit' => false]);
         $form->handleRequest($request);
 
-        // Handle AJAX submission
-        if ($request->isXmlHttpRequest() && $form->isSubmitted()) {
+        // Handle AJAX submission - check both XHR header and Accept header
+        $isAjaxRequest = $request->isXmlHttpRequest() || 
+            str_contains($request->headers->get('Accept', ''), 'application/json');
+        
+        if ($isAjaxRequest && $form->isSubmitted()) {
+            error_log("[DEBUG $debugId] AJAX path entered - form isValid: " . ($form->isValid() ? 'YES' : 'NO'));
             if ($form->isValid()) {
                 try {
                     $plainPassword = $form->get('plainPassword')->getData();
@@ -2627,12 +3084,14 @@ class AdminController extends AbstractController
                         default => $this->generateUrl('admin_users_all')
                     };
                     
+                    error_log("[DEBUG $debugId] AJAX SUCCESS - User created ID: " . $createdUser->getId());
                     return new JsonResponse([
                         'success' => true,
                         'message' => 'User has been created successfully.',
                         'redirectUrl' => $redirectUrl
                     ]);
                 } catch (\Exception $e) {
+                    error_log("[DEBUG $debugId] AJAX EXCEPTION: " . $e->getMessage());
                     return new JsonResponse([
                         'success' => false,
                         'message' => 'Error creating user: ' . $e->getMessage(),
@@ -2643,6 +3102,7 @@ class AdminController extends AbstractController
                 // Collect all form errors
                 $errors = [];
                 foreach ($form->getErrors(true) as $error) {
+                    error_log("[DEBUG $debugId] AJAX VALIDATION ERROR: " . $error->getMessage() . " (field: " . ($error->getOrigin() ? $error->getOrigin()->getName() : 'general') . ")");
                     $fieldName = $error->getOrigin() ? $error->getOrigin()->getName() : 'general';
                     if (!isset($errors[$fieldName])) {
                         $errors[$fieldName] = [];
@@ -2660,6 +3120,7 @@ class AdminController extends AbstractController
 
         // Handle regular form submission (fallback)
         if ($form->isSubmitted() && $form->isValid()) {
+            error_log("[DEBUG $debugId] FALLBACK PATH entered (non-AJAX) - THIS SHOULD NOT HAPPEN WITH AJAX FORM");
             try {
                 $plainPassword = $form->get('plainPassword')->getData();
                 $userData = [
@@ -3973,6 +4434,7 @@ class AdminController extends AbstractController
             ->getResult();
         
         $semesters = $this->systemSettingsService->getAvailableSemesters();
+        $autoTransitionStatus = $this->systemSettingsService->getAutoTransitionStatus();
 
         return $this->render('admin/settings/system.html.twig', array_merge($this->getBaseTemplateData(), [
             'page_title' => 'System Settings',
@@ -3980,6 +4442,7 @@ class AdminController extends AbstractController
             'active_year' => $activeYear,
             'active_semester' => $activeSemester,
             'available_semesters' => $semesters,
+            'auto_transition_status' => $autoTransitionStatus,
         ]));
     }
 
@@ -3998,14 +4461,17 @@ class AdminController extends AbstractController
                 ], 400);
             }
 
-            // Validate the transition
-            $warnings = $this->systemSettingsService->validateSemesterTransition($academicYearId, $semester);
-            if (!empty($warnings)) {
-                return new JsonResponse([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'warnings' => $warnings
-                ], 400);
+            // Validate the transition (skip "already active" check when updating dates)
+            $isUpdatingDates = !empty($data['all_semester_dates']) && is_array($data['all_semester_dates']);
+            if (!$isUpdatingDates) {
+                $warnings = $this->systemSettingsService->validateSemesterTransition($academicYearId, $semester);
+                if (!empty($warnings)) {
+                    return new JsonResponse([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'warnings' => $warnings
+                    ], 400);
+                }
             }
 
             // Get schedule count for current semester (if exists)
@@ -4018,12 +4484,33 @@ class AdminController extends AbstractController
                 $currentScheduleCount = $scheduleRepository->countByAcademicYearAndSemester($currentYear, $currentSemester);
             }
 
-            // Set the new active semester
-            $result = $this->systemSettingsService->setActiveSemester($academicYearId, $semester);
+            // Parse semester dates if provided
+            $semesterStart = null;
+            $semesterEnd = null;
+            if (!empty($data['semester_start'])) {
+                $semesterStart = new \DateTime($data['semester_start']);
+            }
+            if (!empty($data['semester_end'])) {
+                $semesterEnd = new \DateTime($data['semester_end']);
+            }
+
+            // Validate all semester dates BEFORE changing the active semester
+            // to prevent partial state (semester changed but dates invalid)
+            if (!empty($data['all_semester_dates']) && is_array($data['all_semester_dates'])) {
+                // This will throw InvalidArgumentException if dates are out of order
+                // We call it with validate-only first by catching early
+                $this->systemSettingsService->saveAllSemesterDates((int) $academicYearId, $data['all_semester_dates']);
+            }
+
+            // Set the new active semester (dates already saved above)
+            $result = $this->systemSettingsService->setActiveSemester($academicYearId, $semester, $semesterStart, $semesterEnd);
 
             // Update the user's semester filter preference to match the new active semester
             $session = $request->getSession();
             $session->set('semester_filter', $semester);
+
+            // Set grace period flag so auto-transition subscriber won't immediately undo this
+            $session->set('_semester_manual_set_at', time());
 
             // Log the activity
             $this->activityLogService->log(
@@ -4067,11 +4554,69 @@ class AdminController extends AbstractController
                 $info['schedule_count'] = 0;
             }
 
+            // Add auto-transition status
+            $info['auto_transition'] = $this->systemSettingsService->getAutoTransitionStatus();
+
             return new JsonResponse($info);
 
         } catch (\Exception $e) {
             return new JsonResponse([
                 'error' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/settings/system/clear-semester-dates', name: 'clear_semester_dates', methods: ['POST'])]
+    public function clearSemesterDates(Request $request): JsonResponse
+    {
+        try {
+            $data = json_decode($request->getContent(), true);
+            $academicYearId = $data['academic_year_id'] ?? null;
+            $semester = $data['semester'] ?? null;
+
+            if (!$academicYearId || !$semester) {
+                return new JsonResponse([
+                    'success' => false,
+                    'message' => 'Academic year and semester are required'
+                ], 400);
+            }
+
+            $this->systemSettingsService->clearSemesterDates((int) $academicYearId, $semester);
+
+            $this->activityLogService->log(
+                'system_settings',
+                sprintf('Cleared %s semester dates for academic year ID %d', $semester, $academicYearId),
+                'AcademicYear',
+                (int) $academicYearId,
+                null,
+                $this->getUser()
+            );
+
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Semester dates cleared successfully'
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    #[Route('/settings/system/semester-dates/{yearId}', name: 'get_semester_dates', methods: ['GET'])]
+    public function getSemesterDates(int $yearId): JsonResponse
+    {
+        try {
+            $dates = $this->systemSettingsService->getAllSemesterDatesForYear($yearId);
+            return new JsonResponse([
+                'success' => true,
+                'dates' => $dates,
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }

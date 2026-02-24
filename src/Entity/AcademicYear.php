@@ -54,6 +54,25 @@ class AcademicYear
     #[ORM\Column(name: 'deleted_at', type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $deletedAt = null;
 
+    // Per-semester date fields
+    #[ORM\Column(name: 'first_sem_start', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $firstSemStart = null;
+
+    #[ORM\Column(name: 'first_sem_end', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $firstSemEnd = null;
+
+    #[ORM\Column(name: 'second_sem_start', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $secondSemStart = null;
+
+    #[ORM\Column(name: 'second_sem_end', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $secondSemEnd = null;
+
+    #[ORM\Column(name: 'summer_start', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $summerStart = null;
+
+    #[ORM\Column(name: 'summer_end', type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $summerEnd = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -227,6 +246,153 @@ class AcademicYear
         }
         
         return $now >= $this->startDate && $now <= $this->endDate;
+    }
+
+    // --- Per-semester date getters/setters ---
+
+    public function getFirstSemStart(): ?\DateTimeInterface
+    {
+        return $this->firstSemStart;
+    }
+
+    public function setFirstSemStart(?\DateTimeInterface $firstSemStart): static
+    {
+        $this->firstSemStart = $firstSemStart;
+        return $this;
+    }
+
+    public function getFirstSemEnd(): ?\DateTimeInterface
+    {
+        return $this->firstSemEnd;
+    }
+
+    public function setFirstSemEnd(?\DateTimeInterface $firstSemEnd): static
+    {
+        $this->firstSemEnd = $firstSemEnd;
+        return $this;
+    }
+
+    public function getSecondSemStart(): ?\DateTimeInterface
+    {
+        return $this->secondSemStart;
+    }
+
+    public function setSecondSemStart(?\DateTimeInterface $secondSemStart): static
+    {
+        $this->secondSemStart = $secondSemStart;
+        return $this;
+    }
+
+    public function getSecondSemEnd(): ?\DateTimeInterface
+    {
+        return $this->secondSemEnd;
+    }
+
+    public function setSecondSemEnd(?\DateTimeInterface $secondSemEnd): static
+    {
+        $this->secondSemEnd = $secondSemEnd;
+        return $this;
+    }
+
+    public function getSummerStart(): ?\DateTimeInterface
+    {
+        return $this->summerStart;
+    }
+
+    public function setSummerStart(?\DateTimeInterface $summerStart): static
+    {
+        $this->summerStart = $summerStart;
+        return $this;
+    }
+
+    public function getSummerEnd(): ?\DateTimeInterface
+    {
+        return $this->summerEnd;
+    }
+
+    public function setSummerEnd(?\DateTimeInterface $summerEnd): static
+    {
+        $this->summerEnd = $summerEnd;
+        return $this;
+    }
+
+    /**
+     * Get the start/end dates for a specific semester
+     * @return array{start: ?\DateTimeInterface, end: ?\DateTimeInterface}
+     */
+    public function getSemesterDates(?string $semester = null): array
+    {
+        $semester = $semester ?? $this->currentSemester;
+
+        return match ($semester) {
+            '1st' => ['start' => $this->firstSemStart, 'end' => $this->firstSemEnd],
+            '2nd' => ['start' => $this->secondSemStart, 'end' => $this->secondSemEnd],
+            'Summer' => ['start' => $this->summerStart, 'end' => $this->summerEnd],
+            default => ['start' => null, 'end' => null],
+        };
+    }
+
+    /**
+     * Set the start/end dates for a specific semester
+     */
+    public function setSemesterDates(string $semester, ?\DateTimeInterface $start, ?\DateTimeInterface $end): static
+    {
+        match ($semester) {
+            '1st' => (function() use ($start, $end) {
+                $this->firstSemStart = $start;
+                $this->firstSemEnd = $end;
+            })(),
+            '2nd' => (function() use ($start, $end) {
+                $this->secondSemStart = $start;
+                $this->secondSemEnd = $end;
+            })(),
+            'Summer' => (function() use ($start, $end) {
+                $this->summerStart = $start;
+                $this->summerEnd = $end;
+            })(),
+            default => null,
+        };
+
+        return $this;
+    }
+
+    /**
+     * Check if the current semester has expired (end date has passed)
+     */
+    public function isCurrentSemesterExpired(): bool
+    {
+        if (!$this->currentSemester) {
+            return false;
+        }
+
+        $dates = $this->getSemesterDates($this->currentSemester);
+        if (!$dates['end']) {
+            return false;
+        }
+
+        $now = new \DateTime('today');
+        return $now > $dates['end'];
+    }
+
+    /**
+     * Get the number of days remaining in the current semester
+     * Returns null if no end date is set, negative if already expired
+     */
+    public function getCurrentSemesterDaysRemaining(): ?int
+    {
+        if (!$this->currentSemester) {
+            return null;
+        }
+
+        $dates = $this->getSemesterDates($this->currentSemester);
+        if (!$dates['end']) {
+            return null;
+        }
+
+        $now = new \DateTime('today');
+        $diff = $now->diff($dates['end']);
+
+        return $diff->invert ? -$diff->days : $diff->days;
     }
 
     public function __toString(): string

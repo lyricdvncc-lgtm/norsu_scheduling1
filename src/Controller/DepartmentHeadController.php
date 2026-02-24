@@ -464,17 +464,17 @@ class DepartmentHeadController extends AbstractController
             return $this->redirectToRoute('department_head_dashboard');
         }
 
-        // Get filters
+        // Get filters - academic year & semester are server-side (affect DB query)
+        // Status and search are handled client-side in the DataTable
         $academicYearId = $request->query->get('academic_year');
         $semester = $request->query->get('semester');
-        $statusFilter = $request->query->get('status', 'all'); // all, overloaded, optimal, underloaded
 
-        // Get workload data
+        // Always load all statuses - filtering is done client-side
         $workloadData = $this->departmentHeadService->getFacultyWorkloadReport(
             $department,
             $academicYearId,
             $semester,
-            $statusFilter
+            'all'
         );
 
         return $this->render('department_head/reports/faculty_workload.html.twig', array_merge($this->getBaseTemplateData(), [
@@ -484,8 +484,287 @@ class DepartmentHeadController extends AbstractController
             'academic_years' => $workloadData['academic_years'],
             'selected_academic_year' => $workloadData['selected_academic_year'],
             'selected_semester' => $workloadData['selected_semester'],
-            'status_filter' => $statusFilter,
         ]));
+    }
+
+    #[Route('/reports/faculty-workload/json', name: 'reports_faculty_workload_json', methods: ['GET'])]
+    public function facultyWorkloadJson(Request $request): JsonResponse
+    {
+        /** @var User $departmentHead */
+        $departmentHead = $this->getUser();
+        $department = $departmentHead->getDepartment();
+
+        if (!$department) {
+            return new JsonResponse(['error' => 'No department assigned'], 400);
+        }
+
+        $academicYearId = $request->query->get('academic_year');
+        $semester = $request->query->get('semester');
+
+        $workloadData = $this->departmentHeadService->getFacultyWorkloadReport(
+            $department,
+            $academicYearId,
+            $semester,
+            'all'
+        );
+
+        // Transform to JSON-safe format
+        $facultyList = [];
+        foreach ($workloadData['faculty_workload'] as $faculty) {
+            $initials = implode('', array_map(fn($w) => mb_substr($w, 0, 1), explode(' ', $faculty['name'])));
+            $facultyList[] = [
+                'id' => $faculty['id'],
+                'name' => $faculty['name'],
+                'email' => $faculty['email'],
+                'initials' => $initials,
+                'units' => $faculty['units'],
+                'percentage' => round($faculty['percentage'], 1),
+                'status' => $faculty['status'],
+                'status_color' => $faculty['status_color'],
+                'course_count' => $faculty['course_count'],
+                'courses' => $faculty['courses'],
+            ];
+        }
+
+        return new JsonResponse([
+            'faculty' => $facultyList,
+            'statistics' => $workloadData['statistics'],
+            'selected_academic_year' => $workloadData['selected_academic_year'],
+            'selected_semester' => $workloadData['selected_semester'],
+        ]);
+    }
+
+    // Room Utilization Report
+
+    #[Route('/reports/room-utilization', name: 'reports_room_utilization')]
+    public function roomUtilizationReport(Request $request): Response
+    {
+        /** @var User $departmentHead */
+        $departmentHead = $this->getUser();
+        $department = $departmentHead->getDepartment();
+
+        if (!$department) {
+            $this->addFlash('error', 'You are not assigned to a department.');
+            return $this->redirectToRoute('department_head_dashboard');
+        }
+
+        $departmentIds = $this->getDepartmentGroupIds($department);
+
+        // Get academic years for filter
+        $academicYears = $this->academicYearRepository->findBy([], ['year' => 'DESC']);
+
+        // Get active semester defaults
+        $activeYear = $this->systemSettingsService->getActiveAcademicYear();
+        $activeSemester = $this->systemSettingsService->getActiveSemester();
+
+        return $this->render('department_head/reports/room_utilization.html.twig', array_merge($this->getBaseTemplateData(), [
+            'page_title' => 'Room Utilization Report',
+            'academic_years' => $academicYears,
+            'active_year' => $activeYear,
+            'active_semester' => $activeSemester,
+        ]));
+    }
+
+    #[Route('/reports/room-utilization/json', name: 'reports_room_utilization_json', methods: ['GET'])]
+    public function roomUtilizationJson(Request $request): JsonResponse
+    {
+        /** @var User $departmentHead */
+        $departmentHead = $this->getUser();
+        $department = $departmentHead->getDepartment();
+
+        if (!$department) {
+            return new JsonResponse(['error' => 'No department assigned'], 400);
+        }
+
+        $departmentIds = $this->getDepartmentGroupIds($department);
+        $academicYearId = $request->query->get('academic_year');
+        $semester = $request->query->get('semester');
+
+        // Build schedule query with filters
+        $qb = $this->entityManager->getRepository(Schedule::class)
+            ->createQueryBuilder('s')
+            ->select('s', 'r', 'sub', 'u')
+            ->leftJoin('s.room', 'r')
+            ->leftJoin('s.subject', 'sub')
+            ->leftJoin('s.faculty', 'u')
+            ->where('sub.department IN (:departmentIds)')
+            ->andWhere('s.status = :status')
+            ->setParameter('departmentIds', $departmentIds)
+            ->setParameter('status', 'active');
+
+        if ($academicYearId) {
+            $qb->andWhere('s.academicYear = :academicYear')
+               ->setParameter('academicYear', $academicYearId);
+        }
+        if ($semester) {
+            $qb->andWhere('s.semester = :semester')
+               ->setParameter('semester', $semester);
+        }
+
+        $schedules = $qb->getQuery()->getResult();
+
+        // Get all rooms for this department group
+        $rooms = $this->entityManager->getRepository(Room::class)
+            ->createQueryBuilder('r')
+            ->where('r.department IN (:departmentIds)')
+            ->andWhere('r.isActive = :active')
+            ->setParameter('departmentIds', $departmentIds)
+            ->setParameter('active', true)
+            ->orderBy('r.building', 'ASC')
+            ->addOrderBy('r.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Build room utilization data
+        $roomData = [];
+        $totalSlots = 0;
+        $usedSlots = 0;
+        $roomTypes = [];
+        $buildingStats = [];
+
+        // Define available time slots (7am-9pm, Mon-Sat = 14 hours * 6 days = 84 slots per room)
+        $maxSlotsPerRoom = 84; // 14 hours * 6 days
+
+        foreach ($rooms as $room) {
+            $roomSchedules = array_filter($schedules, fn($s) => $s->getRoom() && $s->getRoom()->getId() === $room->getId());
+            
+            // Calculate hours used
+            $hoursUsed = 0;
+            $scheduleDetails = [];
+            $daySlots = ['Mon' => [], 'Tue' => [], 'Wed' => [], 'Thu' => [], 'Fri' => [], 'Sat' => []];
+            
+            foreach ($roomSchedules as $schedule) {
+                $start = $schedule->getStartTime();
+                $end = $schedule->getEndTime();
+                if ($start && $end) {
+                    $diff = $start->diff($end);
+                    $hours = $diff->h + ($diff->i / 60);
+                    
+                    $dayPattern = $schedule->getDayPattern();
+                    $daysCount = 0;
+                    $dayMap = ['M' => 'Mon', 'T' => 'Tue', 'W' => 'Wed', 'Th' => 'Thu', 'F' => 'Fri', 'S' => 'Sat'];
+                    
+                    // Parse day pattern
+                    $days = [];
+                    $pattern = $dayPattern ?? '';
+                    while (strlen($pattern) > 0) {
+                        if (str_starts_with($pattern, 'Th')) {
+                            $days[] = 'Thu';
+                            $pattern = substr($pattern, 2);
+                        } elseif (isset($dayMap[$pattern[0]])) {
+                            $days[] = $dayMap[$pattern[0]];
+                            $pattern = substr($pattern, 1);
+                        } else {
+                            $pattern = substr($pattern, 1);
+                        }
+                    }
+                    $daysCount = count($days);
+                    $hoursUsed += $hours * $daysCount;
+                    
+                    foreach ($days as $day) {
+                        $daySlots[$day][] = [
+                            'start' => $start->format('H:i'),
+                            'end' => $end->format('H:i'),
+                        ];
+                    }
+                    
+                    $scheduleDetails[] = [
+                        'subject_code' => $schedule->getSubject()->getCode(),
+                        'subject_title' => $schedule->getSubject()->getTitle(),
+                        'section' => $schedule->getSection(),
+                        'faculty' => $schedule->getFaculty() ? $schedule->getFaculty()->getFirstName() . ' ' . $schedule->getFaculty()->getLastName() : 'TBA',
+                        'day_pattern' => $schedule->getDayPattern(),
+                        'time' => $start->format('g:i A') . ' - ' . $end->format('g:i A'),
+                        'enrolled' => $schedule->getEnrolledStudents(),
+                    ];
+                }
+            }
+
+            $utilizationPercent = $maxSlotsPerRoom > 0 ? round(($hoursUsed / $maxSlotsPerRoom) * 100, 1) : 0;
+            $utilizationPercent = min($utilizationPercent, 100);
+            
+            $totalSlots += $maxSlotsPerRoom;
+            $usedSlots += $hoursUsed;
+
+            // Determine status
+            if (count($roomSchedules) === 0) {
+                $status = 'unused';
+                $statusLabel = 'Unused';
+                $statusColor = 'gray';
+            } elseif ($utilizationPercent >= 75) {
+                $status = 'high';
+                $statusLabel = 'High Usage';
+                $statusColor = 'red';
+            } elseif ($utilizationPercent >= 40) {
+                $status = 'moderate';
+                $statusLabel = 'Moderate';
+                $statusColor = 'green';
+            } else {
+                $status = 'low';
+                $statusLabel = 'Low Usage';
+                $statusColor = 'yellow';
+            }
+            
+            $type = $room->getType() ?? 'classroom';
+            $building = $room->getBuilding() ?? 'Unknown';
+
+            // Track type stats
+            if (!isset($roomTypes[$type])) {
+                $roomTypes[$type] = ['total' => 0, 'used' => 0, 'hours' => 0];
+            }
+            $roomTypes[$type]['total']++;
+            if (count($roomSchedules) > 0) $roomTypes[$type]['used']++;
+            $roomTypes[$type]['hours'] += $hoursUsed;
+
+            // Track building stats
+            if (!isset($buildingStats[$building])) {
+                $buildingStats[$building] = ['total' => 0, 'used' => 0, 'hours' => 0];
+            }
+            $buildingStats[$building]['total']++;
+            if (count($roomSchedules) > 0) $buildingStats[$building]['used']++;
+            $buildingStats[$building]['hours'] += $hoursUsed;
+
+            $roomData[] = [
+                'id' => $room->getId(),
+                'code' => $room->getCode(),
+                'name' => $room->getName() ?? $room->getCode(),
+                'building' => $building,
+                'floor' => $room->getFloor(),
+                'type' => $type,
+                'capacity' => $room->getCapacity(),
+                'schedule_count' => count($roomSchedules),
+                'hours_used' => round($hoursUsed, 1),
+                'utilization' => $utilizationPercent,
+                'status' => $status,
+                'status_label' => $statusLabel,
+                'status_color' => $statusColor,
+                'schedules' => $scheduleDetails,
+                'day_slots' => $daySlots,
+            ];
+        }
+
+        // Calculate overall stats
+        $totalRooms = count($rooms);
+        $usedRooms = count(array_filter($roomData, fn($r) => $r['schedule_count'] > 0));
+        $overallUtilization = $totalSlots > 0 ? round(($usedSlots / $totalSlots) * 100, 1) : 0;
+        $avgSchedulesPerRoom = $totalRooms > 0 ? round(array_sum(array_column($roomData, 'schedule_count')) / $totalRooms, 1) : 0;
+
+        return new JsonResponse([
+            'rooms' => $roomData,
+            'statistics' => [
+                'total_rooms' => $totalRooms,
+                'used_rooms' => $usedRooms,
+                'unused_rooms' => $totalRooms - $usedRooms,
+                'overall_utilization' => $overallUtilization,
+                'avg_schedules_per_room' => $avgSchedulesPerRoom,
+                'high_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'high')),
+                'moderate_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'moderate')),
+                'low_usage' => count(array_filter($roomData, fn($r) => $r['status'] === 'low')),
+                'unused' => count(array_filter($roomData, fn($r) => $r['status'] === 'unused')),
+            ],
+            'room_types' => $roomTypes,
+            'building_stats' => $buildingStats,
+        ]);
     }
 
     #[Route('/reports/history', name: 'reports_history', methods: ['GET'])]
@@ -513,20 +792,24 @@ class DepartmentHeadController extends AbstractController
         // Get all academic years for filter dropdown
         $years = $this->getHistoryYears();
         
-        // Get department group IDs
+        // Get department group IDs (for rooms/faculty which are shared resources)
         $departmentIds = $this->getDepartmentGroupIds($department);
+        // Own department ID only (for subjects - each department owns its own subjects)
+        $ownDepartmentIds = [$department->getId()];
         
         // Load schedules and build data using helper methods
         $schedules = $this->loadDepartmentSchedules($departmentIds);
         $roomsData = $this->buildHistoryRoomsData($departmentIds, $schedules);
         $facultyData = $this->buildHistoryFacultyData($departmentIds, $schedules);
-        $subjectsData = $this->buildHistorySubjectsData($departmentIds, $schedules);
+        $subjectsData = $this->buildHistorySubjectsData($ownDepartmentIds, $schedules);
         
         // Handle exports
         if ($exportType === 'rooms-pdf') {
             return $this->exportDepartmentRoomsPdf($roomsData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
         } elseif ($exportType === 'faculty-pdf') {
             return $this->exportDepartmentFacultyPdf($facultyData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
+        } elseif ($exportType === 'subjects-pdf') {
+            return $this->exportDepartmentSubjectsPdf($subjectsData, $selectedYear, $selectedSemester, $department->getName(), $searchTerm);
         }
         
         // Create display string for active semester
@@ -621,20 +904,28 @@ class DepartmentHeadController extends AbstractController
             
             $roomYears = [];
             $roomSemesters = [];
+            $roomDepartments = [];
             foreach ($roomSchedules as $schedule) {
                 if ($schedule->getAcademicYear()) {
-                    $roomYears[] = $schedule->getAcademicYear();
+                    $roomYears[$schedule->getAcademicYear()->getId()] = $schedule->getAcademicYear()->getYear();
                 }
                 if ($schedule->getSemester()) {
                     $roomSemesters[] = $schedule->getSemester();
+                }
+                if ($schedule->getSubject() && $schedule->getSubject()->getDepartment()) {
+                    $dept = $schedule->getSubject()->getDepartment();
+                    $roomDepartments[$dept->getId()] = $dept->getName();
                 }
             }
             
             $roomsData[] = [
                 0 => $room,
                 'scheduleCount' => count($roomSchedules),
+                'departments' => implode(', ', array_unique($roomDepartments)),
                 'years' => implode(', ', array_unique($roomYears)),
-                'semesters' => implode(', ', array_unique($roomSemesters))
+                'semesters' => implode(', ', array_unique($roomSemesters)),
+                'yearsList' => array_values(array_unique($roomYears)),
+                'semestersList' => array_values(array_unique($roomSemesters))
             ];
         }
         return $roomsData;
@@ -647,7 +938,7 @@ class DepartmentHeadController extends AbstractController
     {
         $facultyResults = $this->entityManager->getRepository(User::class)
             ->createQueryBuilder('u')
-            ->select('u', 'COUNT(s.id) as scheduleCount', 'SUM(sub.units) as totalUnits')
+            ->select('u', 'COUNT(s.id) as scheduleCount', 'COALESCE(SUM(sub.units), 0) as totalUnits')
             ->leftJoin(Schedule::class, 's', 'WITH', 's.faculty = u')
             ->leftJoin('s.subject', 'sub')
             ->where('u.role = :role')
@@ -669,21 +960,28 @@ class DepartmentHeadController extends AbstractController
             
             $facultyYears = [];
             $facultySemesters = [];
+            $subjectsList = [];
             foreach ($facultySchedules as $schedule) {
                 if ($schedule->getAcademicYear()) {
-                    $facultyYears[] = $schedule->getAcademicYear();
+                    $facultyYears[$schedule->getAcademicYear()->getId()] = $schedule->getAcademicYear()->getYear();
                 }
                 if ($schedule->getSemester()) {
                     $facultySemesters[] = $schedule->getSemester();
+                }
+                if ($schedule->getSubject()) {
+                    $subjectsList[$schedule->getSubject()->getId()] = $schedule->getSubject()->getCode();
                 }
             }
             
             $facultyData[] = [
                 0 => $faculty,
-                'scheduleCount' => $result['scheduleCount'],
-                'totalUnits' => $result['totalUnits'],
+                'scheduleCount' => (int) $result['scheduleCount'],
+                'totalUnits' => (int) ($result['totalUnits'] ?? 0),
                 'years' => implode(', ', array_unique($facultyYears)),
-                'semesters' => implode(', ', array_unique($facultySemesters))
+                'semesters' => implode(', ', array_unique($facultySemesters)),
+                'subjects' => array_values(array_unique($subjectsList)),
+                'yearsList' => array_values(array_unique($facultyYears)),
+                'semestersList' => array_values(array_unique($facultySemesters))
             ];
         }
         return $facultyData;
@@ -720,10 +1018,15 @@ class DepartmentHeadController extends AbstractController
                     $subjectSemesters[] = $schedule->getSemester();
                 }
                 
+                $timeStr = 'N/A';
+                if ($schedule->getStartTime() && $schedule->getEndTime()) {
+                    $timeStr = $schedule->getStartTime()->format('h:i A') . ' - ' . $schedule->getEndTime()->format('h:i A');
+                }
+
                 $scheduleDetails[] = [
                     'section' => $schedule->getSection() ?: 'N/A',
-                    'time' => $schedule->getStartTime()->format('h:i A') . ' - ' . $schedule->getEndTime()->format('h:i A'),
-                    'day' => $schedule->getDayPattern(),
+                    'time' => $timeStr,
+                    'day' => $schedule->getDayPattern() ?: 'N/A',
                     'room' => $schedule->getRoom() ? $schedule->getRoom()->getCode() : 'N/A',
                     'faculty' => $schedule->getFaculty() ? ($schedule->getFaculty()->getFirstName() . ' ' . $schedule->getFaculty()->getLastName()) : 'N/A',
                     'year' => $schedule->getAcademicYear() ? $schedule->getAcademicYear()->getYear() : null,
@@ -787,6 +1090,27 @@ class DepartmentHeadController extends AbstractController
         ]);
     }
 
+    private function exportDepartmentSubjectsPdf(array $subjectsData, ?string $year, ?string $semester, string $departmentName, ?string $searchTerm): Response
+    {
+        $filteredSubjects = $this->filterHistoryData($subjectsData, $year, $semester, $searchTerm);
+
+        $pdfService = new \App\Service\SubjectsReportPdfService($this->entityManager);
+        $pdfContent = $pdfService->generateSubjectsHistoryPdf($filteredSubjects, $year, $semester, $departmentName, $searchTerm);
+
+        $filenameParts = ['subjects', preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($departmentName))];
+        if ($year) $filenameParts[] = str_replace('-', '_', $year);
+        if ($semester) $filenameParts[] = strtolower($semester) . '_sem';
+        if ($searchTerm) $filenameParts[] = 'search';
+        $filenameParts[] = date('Y-m-d');
+
+        $filename = implode('_', $filenameParts) . '.pdf';
+
+        return new Response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
+    }
+
     private function filterHistoryData(array $data, ?string $year, ?string $semester, ?string $searchTerm): array
     {
         $filtered = [];
@@ -794,14 +1118,28 @@ class DepartmentHeadController extends AbstractController
         foreach ($data as $item) {
             $entity = $item[0];
             
-            // Filter by year
-            if ($year && !empty($item['years']) && !str_contains($item['years'], $year)) {
-                continue;
+            // Filter by year - skip items that don't match
+            if ($year) {
+                $itemYears = $item['years'] ?? '';
+                if ($itemYears !== '' && !str_contains($itemYears, $year)) {
+                    continue;
+                }
+                // If item has no years data at all and we're filtering, skip it
+                if ($itemYears === '' && !isset($item['schedules'])) {
+                    continue;
+                }
             }
             
-            // Filter by semester
-            if ($semester && !empty($item['semesters']) && !str_contains(strtolower($item['semesters']), strtolower($semester))) {
-                continue;
+            // Filter by semester - skip items that don't match
+            if ($semester) {
+                $itemSemesters = $item['semesters'] ?? '';
+                if ($itemSemesters !== '' && !str_contains(strtolower($itemSemesters), strtolower($semester))) {
+                    continue;
+                }
+                // If item has no semesters data at all and we're filtering, skip it
+                if ($itemSemesters === '' && !isset($item['schedules'])) {
+                    continue;
+                }
             }
             
             // Filter by search term
@@ -815,6 +1153,9 @@ class DepartmentHeadController extends AbstractController
                 if (method_exists($entity, 'getName')) {
                     $searchable .= ' ' . strtolower($entity->getName());
                 }
+                if (method_exists($entity, 'getTitle')) {
+                    $searchable .= ' ' . strtolower($entity->getTitle());
+                }
                 if (method_exists($entity, 'getFirstName')) {
                     $searchable .= ' ' . strtolower($entity->getFirstName() . ' ' . $entity->getLastName());
                 }
@@ -823,6 +1164,31 @@ class DepartmentHeadController extends AbstractController
                 }
                 
                 if (!str_contains($searchable, $searchLower)) {
+                    continue;
+                }
+            }
+
+            // Filter individual schedules within the item by year/semester
+            if (($year || $semester) && isset($item['schedules']) && is_array($item['schedules'])) {
+                $filteredSchedules = array_values(array_filter($item['schedules'], function ($sch) use ($year, $semester) {
+                    if ($year) {
+                        $schYear = (string)($sch['year'] ?? '');
+                        if ($schYear === '' || !str_contains($schYear, $year)) {
+                            return false;
+                        }
+                    }
+                    if ($semester) {
+                        $schSemester = (string)($sch['semester'] ?? '');
+                        if ($schSemester === '' || strtolower($schSemester) !== strtolower($semester)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }));
+                $item['schedules'] = $filteredSchedules;
+                
+                // If no schedules remain after filtering, skip this item entirely
+                if (empty($filteredSchedules)) {
                     continue;
                 }
             }
@@ -1202,6 +1568,22 @@ class DepartmentHeadController extends AbstractController
             $activeSemester
         );
 
+        // Detect conflicts for each schedule
+        $scheduleConflicts = [];
+        foreach ($schedules as $schedule) {
+            $conflicts = $this->conflictDetector->detectConflicts($schedule, true);
+            $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule, true);
+            $allConflicts = array_merge($conflicts, $duplicateConflicts);
+            $hasConflict = !empty($allConflicts);
+            $schedule->setIsConflicted($hasConflict);
+            if ($hasConflict) {
+                $scheduleConflicts[$schedule->getId()] = $allConflicts;
+            }
+        }
+
+        // Get rooms accessible to department
+        $rooms = $this->roomRepository->findAccessibleByDepartment($department);
+
         // Group schedules by subject + semester + academic year (block sectioning)
         $groupedSchedules = [];
         foreach ($schedules as $schedule) {
@@ -1221,6 +1603,8 @@ class DepartmentHeadController extends AbstractController
             'page_title' => 'Department Schedules',
             'schedules' => $schedules,
             'groupedSchedules' => $groupedSchedules,
+            'rooms' => $rooms,
+            'scheduleConflicts' => $scheduleConflicts,
         ]));
     }
 
@@ -1241,24 +1625,17 @@ class DepartmentHeadController extends AbstractController
         $activeSemester = $this->systemSettingsService->getActiveSemester();
         
         // Get ALL subjects from department with their semester information
-        // The frontend JavaScript will handle showing/hiding based on semester
-        $subjects = $this->entityManager->createQueryBuilder()
-            ->select('DISTINCT s')
-            ->from('App\Entity\Subject', 's')
-            ->innerJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = s')
-            ->innerJoin('App\Entity\CurriculumTerm', 'ct', 'WITH', 'cs.curriculumTerm = ct')
-            ->innerJoin('App\Entity\Curriculum', 'c', 'WITH', 'ct.curriculum = c')
+        $subjects = $this->subjectRepository->createQueryBuilder('s')
             ->where('s.department = :dept')
             ->andWhere('s.isActive = :active')
-            ->andWhere('c.isPublished = :published')
+            ->andWhere('s.deletedAt IS NULL')
             ->setParameter('dept', $department)
             ->setParameter('active', true)
-            ->setParameter('published', true)
             ->orderBy('s.code', 'ASC')
             ->getQuery()
             ->getResult();
         
-        // Enrich subjects with semester information
+        // Enrich subjects with semester information from curriculum if available
         foreach ($subjects as &$subject) {
             // Get all semesters this subject appears in
             $semesters = $this->entityManager->createQueryBuilder()
@@ -1286,61 +1663,29 @@ class DepartmentHeadController extends AbstractController
 
         if ($request->isMethod('POST')) {
             try {
-                // Get form data
+                // Get form data - the form sends sections as an array (block sectioning)
+                $sectionsData = $request->request->all('sections');
                 $subjectId = $request->request->get('subject');
-                $roomId = $request->request->get('room');
                 $academicYearId = $request->request->get('academic_year');
                 $semester = $request->request->get('semester');
-                $section = $request->request->get('section');
-                $dayPattern = $request->request->get('day_pattern');
-                $startTime = $request->request->get('start_time');
-                $endTime = $request->request->get('end_time');
-                $enrolledStudents = (int) $request->request->get('enrolled_students', 0);
-                $notes = $request->request->get('notes');
 
-                // Validate required fields
-                if (!$subjectId || !$roomId || !$academicYearId || !$semester || !$section || !$dayPattern || !$startTime || !$endTime) {
-                    throw new \Exception('All required fields must be filled.');
+                // Validate required common fields
+                $errors = [];
+                if (empty($subjectId)) {
+                    $errors[] = 'Subject is required.';
+                }
+                if (empty($academicYearId)) {
+                    $errors[] = 'Academic Year is required.';
+                }
+                if (empty($semester)) {
+                    $errors[] = 'Semester is required.';
+                }
+                if (empty($sectionsData) || !is_array($sectionsData)) {
+                    $errors[] = 'At least one section is required.';
                 }
 
-                // Get entities
-                $subject = $this->subjectRepository->find($subjectId);
-                $room = $this->entityManager->getRepository(Room::class)->find($roomId);
-                $academicYear = $this->academicYearRepository->find($academicYearId);
-
-                if (!$subject || !$room || !$academicYear) {
-                    throw new \Exception('Invalid subject, room, or academic year.');
-                }
-
-                // Verify subject belongs to department
-                if ($subject->getDepartment()->getId() !== $department->getId()) {
-                    throw new \Exception('You can only create schedules for subjects in your department.');
-                }
-
-                // Create new schedule
-                $schedule = new Schedule();
-                $schedule->setSubject($subject);
-                $schedule->setRoom($room);
-                $schedule->setAcademicYear($academicYear);
-                $schedule->setSemester($semester);
-                $schedule->setSection($section);
-                $schedule->setDayPattern($dayPattern);
-                $schedule->setEnrolledStudents($enrolledStudents);
-                $schedule->setNotes($notes);
-                $schedule->setStatus('active');
-
-                // Parse and set time
-                try {
-                    $schedule->setStartTime(new \DateTime($startTime));
-                    $schedule->setEndTime(new \DateTime($endTime));
-                } catch (\Exception $e) {
-                    throw new \Exception('Invalid time format.');
-                }
-
-                // Validate time range
-                $timeErrors = $this->conflictDetector->validateTimeRange($schedule);
-                if (!empty($timeErrors)) {
-                    foreach ($timeErrors as $error) {
+                if (!empty($errors)) {
+                    foreach ($errors as $error) {
                         $this->addFlash('error', $error);
                     }
                     return $this->render('admin/schedule/new_v2.html.twig', array_merge($this->getBaseTemplateData(), [
@@ -1355,27 +1700,141 @@ class DepartmentHeadController extends AbstractController
                     ]));
                 }
 
-                // Check for HARD conflicts
-                $conflicts = $this->conflictDetector->detectConflicts($schedule);
-                $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule);
-                
-                $hardConflicts = array_filter($conflicts, function($conflict) {
-                    return $conflict['type'] === 'room_time_conflict' || $conflict['type'] === 'section_conflict';
-                });
-                
-                $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
-                
-                // BLOCK if hard conflicts exist
-                if (!empty($hardConflicts)) {
-                    foreach ($hardConflicts as $conflict) {
-                        $this->addFlash('error', '🚫 ' . $conflict['message']);
+                // Find common entities
+                $subject = $this->subjectRepository->find($subjectId);
+                $academicYear = $this->academicYearRepository->find($academicYearId);
+
+                if (!$subject) {
+                    throw new \Exception('Invalid subject selected.');
+                }
+                if (!$academicYear) {
+                    throw new \Exception('Invalid academic year selected.');
+                }
+
+                // Verify subject belongs to department
+                if ($subject->getDepartment()->getId() !== $department->getId()) {
+                    throw new \Exception('You can only create schedules for subjects in your department.');
+                }
+
+                // Process all sections
+                $createdSchedules = [];
+                $allConflicts = [];
+
+                foreach ($sectionsData as $index => $sectionData) {
+                    $schedule = new Schedule();
+
+                    // Validate section data
+                    $sectionName = trim($sectionData['section'] ?? '');
+                    $roomId = $sectionData['room'] ?? null;
+                    $dayPattern = $sectionData['day_pattern'] ?? '';
+                    $startTime = $sectionData['start_time'] ?? '';
+                    $endTime = $sectionData['end_time'] ?? '';
+                    $enrolledStudents = (int) ($sectionData['enrolled_students'] ?? 0);
+
+                    if (empty($sectionName) || empty($roomId) || empty($dayPattern) || empty($startTime) || empty($endTime)) {
+                        $errors[] = "Section " . ($index + 1) . ": All fields are required.";
+                        continue;
                     }
-                    
-                    $this->addFlash('error', sprintf(
-                        'Cannot create schedule: %d conflict(s) detected. Please choose different time/room/section.',
-                        count($hardConflicts)
-                    ));
-                    
+
+                    $room = $this->entityManager->getRepository(Room::class)->find($roomId);
+                    if (!$room) {
+                        $errors[] = "Section {$sectionName}: Invalid room selected.";
+                        continue;
+                    }
+
+                    // Set schedule properties
+                    $schedule->setSubject($subject);
+                    $schedule->setAcademicYear($academicYear);
+                    $schedule->setSemester($semester);
+                    $schedule->setRoom($room);
+                    $schedule->setSection($sectionName);
+                    $schedule->setDayPattern($dayPattern);
+                    $schedule->setEnrolledStudents($enrolledStudents);
+                    $schedule->setNotes('');
+                    $schedule->setStatus('active');
+
+                    // Parse and set time
+                    try {
+                        $schedule->setStartTime(new \DateTime($startTime));
+                        $schedule->setEndTime(new \DateTime($endTime));
+                    } catch (\Exception $e) {
+                        $errors[] = "Section {$sectionName}: Invalid time format.";
+                        continue;
+                    }
+
+                    // Validate time range
+                    $timeErrors = $this->conflictDetector->validateTimeRange($schedule);
+                    if (!empty($timeErrors)) {
+                        foreach ($timeErrors as $error) {
+                            $errors[] = "Section {$sectionName}: " . $error;
+                        }
+                        continue;
+                    }
+
+                    // Check for conflicts
+                    $conflicts = $this->conflictDetector->detectConflicts($schedule);
+                    $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule);
+
+                    // Combine hard conflicts
+                    $hardConflicts = array_filter($conflicts, function($conflict) {
+                        return in_array($conflict['type'], [
+                            'room_time_conflict',
+                            'section_conflict',
+                            'block_sectioning_conflict'
+                        ]);
+                    });
+                    $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+                    // Deduplicate: keep only the most specific conflict per existing schedule
+                    $priorityMap = [
+                        'section_conflict' => 1,
+                        'block_sectioning_conflict' => 2,
+                        'room_time_conflict' => 3,
+                        'duplicate_subject_section' => 4,
+                    ];
+                    $bestBySchedule = [];
+                    $noScheduleConflicts = [];
+                    foreach ($hardConflicts as $conflict) {
+                        $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                        if (!$conflictScheduleId) {
+                            $noScheduleConflicts[] = $conflict;
+                            continue;
+                        }
+                        $priority = $priorityMap[$conflict['type']] ?? 99;
+                        if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                            $bestBySchedule[$conflictScheduleId] = $conflict;
+                        }
+                    }
+                    $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
+
+                    if (!empty($hardConflicts)) {
+                        foreach ($hardConflicts as $conflict) {
+                            $allConflicts[] = "Section {$sectionName}: " . $conflict['message'];
+                        }
+                        continue;
+                    }
+
+                    // Warn for soft conflicts (capacity)
+                    $capacityErrors = $this->conflictDetector->validateRoomCapacity($schedule);
+                    if (!empty($capacityErrors)) {
+                        foreach ($capacityErrors as $error) {
+                            $this->addFlash('warning', "⚠️ Section {$sectionName}: " . $error);
+                        }
+                    }
+
+                    // No hard conflicts - mark as clean
+                    $schedule->setIsConflicted(false);
+                    $schedule->setCreatedAt(new \DateTime());
+
+                    $this->entityManager->persist($schedule);
+                    $createdSchedules[] = $schedule;
+                }
+
+                // If there are hard conflicts, show them and don't save
+                if (!empty($allConflicts)) {
+                    foreach ($allConflicts as $conflict) {
+                        $this->addFlash('error', '🚫 ' . $conflict);
+                    }
                     return $this->render('admin/schedule/new_v2.html.twig', array_merge($this->getBaseTemplateData(), [
                         'subjects' => $subjects,
                         'rooms' => $rooms,
@@ -1387,44 +1846,51 @@ class DepartmentHeadController extends AbstractController
                         'isDepartmentHead' => true,
                     ]));
                 }
-                
-                // WARN for soft conflicts (capacity)
-                $capacityErrors = $this->conflictDetector->validateRoomCapacity($schedule);
-                if (!empty($capacityErrors)) {
-                    foreach ($capacityErrors as $error) {
-                        $this->addFlash('warning', '⚠️ ' . $error);
+
+                // If there are validation errors, show them
+                if (!empty($errors)) {
+                    foreach ($errors as $error) {
+                        $this->addFlash('error', $error);
                     }
+                    return $this->render('admin/schedule/new_v2.html.twig', array_merge($this->getBaseTemplateData(), [
+                        'subjects' => $subjects,
+                        'rooms' => $rooms,
+                        'academicYears' => $academicYears,
+                        'activeAcademicYear' => $activeAcademicYear,
+                        'activeSemester' => $activeSemester,
+                        'selectedDepartment' => $department,
+                        'departmentId' => $department->getId(),
+                        'isDepartmentHead' => true,
+                    ]));
                 }
 
-                // No conflicts - save as clean schedule
-                $schedule->setIsConflicted(false);
-                $schedule->setCreatedAt(new \DateTime());
-
-                // Save the schedule
-                $this->entityManager->persist($schedule);
+                // All good - flush to database
                 $this->entityManager->flush();
-                
-                // Log the activity
-                $scheduleInfo = sprintf('%s - %s (%s)',
-                    $schedule->getSubject()->getTitle(),
-                    $schedule->getSection(),
-                    $schedule->getDayPattern()
-                );
-                $this->activityLogService->log(
-                    'schedule.created',
-                    "Schedule created: {$scheduleInfo}",
-                    'Schedule',
-                    $schedule->getId(),
-                    [
-                        'subject' => $schedule->getSubject()->getTitle(),
-                        'section' => $schedule->getSection(),
-                        'room' => $schedule->getRoom()->getName(),
-                        'day_pattern' => $schedule->getDayPattern()
-                    ]
-                );
 
-                $this->addFlash('success', '✅ Schedule created successfully!');
-                
+                // Log each created schedule
+                foreach ($createdSchedules as $schedule) {
+                    $scheduleInfo = sprintf('%s - %s (%s)',
+                        $schedule->getSubject()->getTitle(),
+                        $schedule->getSection(),
+                        $schedule->getDayPattern()
+                    );
+                    $this->activityLogService->log(
+                        'schedule.created',
+                        "Schedule created: {$scheduleInfo}",
+                        'Schedule',
+                        $schedule->getId(),
+                        [
+                            'subject' => $schedule->getSubject()->getTitle(),
+                            'section' => $schedule->getSection(),
+                            'room' => $schedule->getRoom()->getName(),
+                            'day_pattern' => $schedule->getDayPattern()
+                        ]
+                    );
+                }
+
+                $count = count($createdSchedules);
+                $this->addFlash('success', "✅ {$count} schedule(s) created successfully!");
+
                 return $this->redirectToRoute('department_head_schedules');
 
             } catch (\Exception $e) {
@@ -1508,6 +1974,17 @@ class DepartmentHeadController extends AbstractController
 
             // Create temporary schedule object for conflict detection
             $schedule = new Schedule();
+            $isEditingExisting = false;
+
+            // If editing an existing schedule, set its ID to exclude from conflict checks
+            if (isset($data['schedule_id']) && $data['schedule_id']) {
+                $existingSchedule = $this->scheduleRepository->find($data['schedule_id']);
+                if ($existingSchedule) {
+                    $schedule = $existingSchedule; // Use existing schedule so it excludes itself
+                    $isEditingExisting = true;
+                }
+            }
+
             $schedule->setSubject($subject);
             $schedule->setRoom($room);
             $schedule->setAcademicYear($academicYear);
@@ -1542,15 +2019,40 @@ class DepartmentHeadController extends AbstractController
                 ]);
             }
 
-            // Check for all conflicts
-            $conflicts = $this->conflictDetector->detectConflicts($schedule);
-            $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule);
+            // Check for all conflicts - exclude self if editing existing schedule
+            $conflicts = $this->conflictDetector->detectConflicts($schedule, $isEditingExisting);
+            $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule, $isEditingExisting);
             
-            // Combine hard conflicts
+            // Combine hard conflicts - include block sectioning conflicts (matching admin)
             $hardConflicts = array_filter($conflicts, function($conflict) {
-                return $conflict['type'] === 'room_time_conflict' || $conflict['type'] === 'section_conflict';
+                return $conflict['type'] === 'room_time_conflict' 
+                    || $conflict['type'] === 'section_conflict'
+                    || $conflict['type'] === 'block_sectioning_conflict';
             });
             $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+            // Deduplicate: when the same existing schedule triggers multiple conflict types,
+            // keep only the most specific one (section_conflict > room_time_conflict > duplicate_subject_section)
+            $priorityMap = [
+                'section_conflict' => 1,
+                'block_sectioning_conflict' => 2,
+                'room_time_conflict' => 3,
+                'duplicate_subject_section' => 4,
+            ];
+            $bestBySchedule = [];
+            $noScheduleConflicts = [];
+            foreach ($hardConflicts as $conflict) {
+                $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                if (!$conflictScheduleId) {
+                    $noScheduleConflicts[] = $conflict;
+                    continue;
+                }
+                $priority = $priorityMap[$conflict['type']] ?? 99;
+                if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                    $bestBySchedule[$conflictScheduleId] = $conflict;
+                }
+            }
+            $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
             
             // Check capacity warnings
             $schedule->setEnrolledStudents(0); // Temporary for capacity check
@@ -1736,6 +2238,194 @@ class DepartmentHeadController extends AbstractController
         }
     }
 
+    #[Route('/schedules/{id}/edit', name: 'schedules_edit', methods: ['GET', 'POST'])]
+    public function editSchedule(Request $request, Schedule $schedule): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $department = $user->getDepartment();
+
+        if (!$department) {
+            $this->addFlash('error', 'You are not assigned to a department.');
+            return $this->redirectToRoute('department_head_dashboard');
+        }
+
+        // Verify schedule belongs to department
+        if ($schedule->getSubject()->getDepartment()->getId() !== $department->getId()) {
+            $this->addFlash('error', 'You do not have access to this schedule.');
+            return $this->redirectToRoute('department_head_schedules');
+        }
+
+        // Get subjects for department (all active subjects, not just curriculum-linked)
+        $subjects = $this->subjectRepository->createQueryBuilder('s')
+            ->where('s.department = :dept')
+            ->andWhere('s.isActive = :active')
+            ->andWhere('s.deletedAt IS NULL')
+            ->setParameter('dept', $department)
+            ->setParameter('active', true)
+            ->orderBy('s.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Ensure the schedule's current subject is in the list
+        $currentSubject = $schedule->getSubject();
+        if ($currentSubject) {
+            $subjectIds = array_map(fn($s) => $s->getId(), $subjects);
+            if (!in_array($currentSubject->getId(), $subjectIds)) {
+                $subjects[] = $currentSubject;
+            }
+        }
+
+        // Get rooms accessible to department
+        $rooms = $this->roomRepository->findAccessibleByDepartment($department);
+
+        // Get active academic years
+        $academicYears = $this->academicYearRepository->findBy(['isActive' => true], ['year' => 'DESC']);
+
+        if ($request->isMethod('POST')) {
+            $subjectId = $request->request->get('subject');
+            $academicYearId = $request->request->get('academic_year');
+            $semester = $request->request->get('semester');
+            $roomId = $request->request->get('room');
+            $section = $request->request->get('section');
+            $dayPattern = $request->request->get('day_pattern');
+            $startTime = $request->request->get('start_time');
+            $endTime = $request->request->get('end_time');
+            $notes = $request->request->get('notes');
+            $enrolledStudents = $request->request->get('enrolled_students');
+
+            $subject = $this->subjectRepository->find($subjectId);
+            $academicYear = $this->academicYearRepository->find($academicYearId);
+            $room = $this->entityManager->getRepository(Room::class)->find($roomId);
+
+            if ($subject && $academicYear && $room && $semester && $dayPattern && $startTime && $endTime) {
+                // Verify subject belongs to department
+                if ($subject->getDepartment()->getId() !== $department->getId()) {
+                    $this->addFlash('error', 'You can only use subjects from your department.');
+                    return $this->render('admin/schedule/edit.html.twig', array_merge($this->getBaseTemplateData(), [
+                        'schedule' => $schedule,
+                        'subjects' => $subjects,
+                        'rooms' => $rooms,
+                        'academicYears' => $academicYears,
+                        'isDepartmentHead' => true,
+                    ]));
+                }
+
+                // Store original values for rollback
+                $originalSubject = $schedule->getSubject();
+                $originalAcademicYear = $schedule->getAcademicYear();
+                $originalSemester = $schedule->getSemester();
+                $originalRoom = $schedule->getRoom();
+                $originalSection = $schedule->getSection();
+                $originalDayPattern = $schedule->getDayPattern();
+                $originalStartTime = $schedule->getStartTime();
+                $originalEndTime = $schedule->getEndTime();
+
+                // Apply new values temporarily for conflict checking
+                $schedule->setSubject($subject);
+                $schedule->setAcademicYear($academicYear);
+                $schedule->setSemester($semester);
+                $schedule->setRoom($room);
+                $schedule->setSection($section);
+                $schedule->setDayPattern($dayPattern);
+                $schedule->setStartTime(new \DateTime($startTime));
+                $schedule->setEndTime(new \DateTime($endTime));
+
+                // Check for conflicts (excluding self)
+                $conflicts = $this->conflictDetector->detectConflicts($schedule, true);
+                $duplicateConflicts = $this->conflictDetector->checkDuplicateSubjectSection($schedule, true);
+
+                $hardConflicts = array_filter($conflicts, function($conflict) {
+                    return in_array($conflict['type'], [
+                        'room_time_conflict',
+                        'section_conflict',
+                        'block_sectioning_conflict'
+                    ]);
+                });
+                $hardConflicts = array_merge($hardConflicts, $duplicateConflicts);
+
+                // Deduplicate: keep only the most specific conflict per existing schedule
+                $priorityMap = [
+                    'section_conflict' => 1,
+                    'block_sectioning_conflict' => 2,
+                    'room_time_conflict' => 3,
+                    'duplicate_subject_section' => 4,
+                ];
+                $bestBySchedule = [];
+                $noScheduleConflicts = [];
+                foreach ($hardConflicts as $conflict) {
+                    $conflictScheduleId = isset($conflict['schedule']) ? $conflict['schedule']->getId() : null;
+                    if (!$conflictScheduleId) {
+                        $noScheduleConflicts[] = $conflict;
+                        continue;
+                    }
+                    $priority = $priorityMap[$conflict['type']] ?? 99;
+                    if (!isset($bestBySchedule[$conflictScheduleId]) || $priority < ($priorityMap[$bestBySchedule[$conflictScheduleId]['type']] ?? 99)) {
+                        $bestBySchedule[$conflictScheduleId] = $conflict;
+                    }
+                }
+                $hardConflicts = array_merge(array_values($bestBySchedule), $noScheduleConflicts);
+
+                if (!empty($hardConflicts)) {
+                    // Rollback changes
+                    $schedule->setSubject($originalSubject);
+                    $schedule->setAcademicYear($originalAcademicYear);
+                    $schedule->setSemester($originalSemester);
+                    $schedule->setRoom($originalRoom);
+                    $schedule->setSection($originalSection);
+                    $schedule->setDayPattern($originalDayPattern);
+                    $schedule->setStartTime($originalStartTime);
+                    $schedule->setEndTime($originalEndTime);
+
+                    foreach ($hardConflicts as $conflict) {
+                        $this->addFlash('error', '🚫 ' . $conflict['message']);
+                    }
+                    $this->addFlash('error', sprintf(
+                        'Cannot update schedule: %d conflict(s) detected. Please resolve all conflicts.',
+                        count($hardConflicts)
+                    ));
+                } else {
+                    // No conflicts, proceed with update
+                    $schedule->setNotes($notes);
+                    $schedule->setEnrolledStudents($enrolledStudents ? (int)$enrolledStudents : null);
+                    $schedule->setUpdatedAt(new \DateTime());
+
+                    $this->entityManager->flush();
+
+                    // Log the activity
+                    $scheduleInfo = sprintf('%s - %s (%s)',
+                        $schedule->getSubject()->getTitle(),
+                        $schedule->getSection(),
+                        $schedule->getDayPattern()
+                    );
+                    $this->activityLogService->log(
+                        'schedule.updated',
+                        "Schedule updated: {$scheduleInfo}",
+                        'Schedule',
+                        $schedule->getId(),
+                        [
+                            'subject' => $schedule->getSubject()->getTitle(),
+                            'section' => $schedule->getSection()
+                        ]
+                    );
+
+                    $this->addFlash('success', 'Schedule updated successfully!');
+                    return $this->redirectToRoute('department_head_schedules');
+                }
+            } else {
+                $this->addFlash('error', 'Please fill in all required fields.');
+            }
+        }
+
+        return $this->render('admin/schedule/edit.html.twig', array_merge($this->getBaseTemplateData(), [
+            'schedule' => $schedule,
+            'subjects' => $subjects,
+            'rooms' => $rooms,
+            'academicYears' => $academicYears,
+            'isDepartmentHead' => true,
+        ]));
+    }
+
     #[Route('/schedules/{id}', name: 'schedules_view')]
     public function viewSchedule(Schedule $schedule): Response
     {
@@ -1895,63 +2585,95 @@ class DepartmentHeadController extends AbstractController
                 ], 403);
             }
 
-            // Get all schedules for this subject
+            // Get all active schedules for this subject WITH year level data from curriculum
             $schedules = $this->scheduleRepository->createQueryBuilder('s')
-                ->select('s.id', 's.section', 's.semester', 's.dayPattern', 's.startTime', 's.endTime', 
-                         'ay.year', 'ay.id as yearId', 'r.code as roomCode', 's.status')
+                ->select('s.section', 's.semester', 's.dayPattern', 
+                         's.startTime', 's.endTime',
+                         'r.id as roomId', 'r.code as roomCode',
+                         'sub.code as subjectCode', 'sub.id as subjectId',
+                         'ay.year', 'ay.id as yearId',
+                         'ct.year_level as yearLevel')
                 ->leftJoin('s.academicYear', 'ay')
                 ->leftJoin('s.room', 'r')
+                ->leftJoin('s.subject', 'sub')
+                ->leftJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = sub.id')
+                ->leftJoin('cs.curriculumTerm', 'ct')
                 ->where('s.subject = :subjectId')
                 ->andWhere('s.status = :status')
                 ->setParameter('subjectId', $subjectId)
                 ->setParameter('status', 'active')
-                ->orderBy('s.semester', 'ASC')
-                ->addOrderBy('s.section', 'ASC')
                 ->getQuery()
                 ->getResult();
+
+            // Also get schedules from other subjects in the same department (for block sectioning conflict detection)
+            $otherSchedules = $this->scheduleRepository->createQueryBuilder('s')
+                ->select('s.section', 's.semester', 's.dayPattern', 
+                         's.startTime', 's.endTime',
+                         'r.id as roomId', 'r.code as roomCode',
+                         'sub.code as subjectCode', 'sub.id as subjectId',
+                         'ay.year', 'ay.id as yearId',
+                         'ct.year_level as yearLevel')
+                ->leftJoin('s.academicYear', 'ay')
+                ->leftJoin('s.room', 'r')
+                ->leftJoin('s.subject', 'sub')
+                ->leftJoin('App\Entity\CurriculumSubject', 'cs', 'WITH', 'cs.subject = sub.id')
+                ->leftJoin('cs.curriculumTerm', 'ct')
+                ->where('s.subject != :subjectId')
+                ->andWhere('s.status = :status')
+                ->andWhere('sub.department = :department')
+                ->setParameter('subjectId', $subjectId)
+                ->setParameter('status', 'active')
+                ->setParameter('department', $department)
+                ->getQuery()
+                ->getResult();
+
+            // Merge both result sets for comprehensive conflict checking
+            $allSchedules = array_merge($schedules, $otherSchedules);
 
             // Extract unique sections and build schedule map
             $sections = [];
             $schedulesMap = [];
-            $fullScheduleDetails = [];
             
-            foreach ($schedules as $schedule) {
+            foreach ($allSchedules as $schedule) {
                 $section = $schedule['section'];
                 $semester = $schedule['semester'];
                 $year = $schedule['year'];
                 $yearId = $schedule['yearId'];
+                $scheduleSubjectId = $schedule['subjectId'];
+                $yearLevel = $schedule['yearLevel'] ?? null;
                 
-                // Add to unique sections list
-                if (!in_array($section, $sections)) {
+                // Format time values
+                $startTime = $schedule['startTime'];
+                $endTime = $schedule['endTime'];
+                
+                if ($startTime instanceof \DateTime) {
+                    $startTime = $startTime->format('H:i');
+                }
+                if ($endTime instanceof \DateTime) {
+                    $endTime = $endTime->format('H:i');
+                }
+                
+                // Add to unique sections list (only for current subject)
+                if ($scheduleSubjectId == $subjectId && !in_array($section, $sections)) {
                     $sections[] = $section;
                 }
                 
-                // Map for duplicate checking: subject_section_semester_yearId
-                // This ensures each subject can have its own Section A, B, etc.
-                $key = $subjectId . '_' . strtoupper(trim($section)) . '_' . $semester . '_' . $yearId;
+                // Map for conflict checking: subject_section_semester_yearId
+                $key = $scheduleSubjectId . '_' . strtoupper(trim($section)) . '_' . $semester . '_' . $yearId;
+                
                 $schedulesMap[$key] = [
                     'section' => $section,
                     'semester' => $semester,
                     'year' => $year,
                     'yearId' => $yearId,
-                    'roomCode' => $schedule['roomCode'],
-                    'dayPattern' => $schedule['dayPattern'],
-                    'startTime' => $schedule['startTime']->format('H:i'),
-                    'endTime' => $schedule['endTime']->format('H:i')
-                ];
-                
-                // Add full details for display
-                $fullScheduleDetails[] = [
-                    'id' => $schedule['id'],
-                    'section' => $section,
-                    'semester' => $semester,
-                    'year' => $year,
-                    'yearId' => $yearId,
-                    'roomCode' => $schedule['roomCode'],
-                    'dayPattern' => $schedule['dayPattern'],
-                    'startTime' => $schedule['startTime']->format('H:i'),
-                    'endTime' => $schedule['endTime']->format('H:i'),
-                    'status' => $schedule['status']
+                    'dayPattern' => $schedule['dayPattern'] ?? '',
+                    'startTime' => $startTime ?? '',
+                    'endTime' => $endTime ?? '',
+                    'roomId' => $schedule['roomId'] ?? null,
+                    'roomCode' => $schedule['roomCode'] ?? '',
+                    'subjectCode' => $schedule['subjectCode'] ?? '',
+                    'subjectId' => $scheduleSubjectId,
+                    'yearLevel' => $yearLevel
                 ];
             }
             
@@ -1961,15 +2683,16 @@ class DepartmentHeadController extends AbstractController
             return $this->json([
                 'sections' => $sections,
                 'schedules' => $schedulesMap,
-                'scheduleDetails' => $fullScheduleDetails,
-                'count' => count($sections)
+                'count' => count($sections),
+                'success' => true
             ]);
             
         } catch (\Exception $e) {
             return $this->json([
                 'sections' => [],
                 'schedules' => [],
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'success' => false
             ], 500);
         }
     }

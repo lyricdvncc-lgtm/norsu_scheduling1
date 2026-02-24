@@ -28,6 +28,20 @@
                 <div class="text-right">
                     {% if hasActiveSemester %}
                         <div class="text-2xl font-bold text-white">{{ activeSemesterDisplay }}</div>
+                        {% if auto_transition_status.has_dates %}
+                            <p class="text-blue-100 text-sm mt-1">
+                                {{ auto_transition_status.semester_start }} &mdash; {{ auto_transition_status.semester_end }}
+                                {% if auto_transition_status.days_remaining is not null %}
+                                    {% if auto_transition_status.is_expired %}
+                                        <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Expired</span>
+                                    {% elseif auto_transition_status.days_remaining <= 14 %}
+                                        <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">{{ auto_transition_status.days_remaining }} days left</span>
+                                    {% else %}
+                                        <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{{ auto_transition_status.days_remaining }} days left</span>
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+                        {% endif %}
                         <div class="flex items-center justify-end mt-1">
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                                 <svg class="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -57,7 +71,7 @@
             </div>
             
             <div class="p-6">
-                <form id="semesterChangeForm" class="space-y-6">
+                <form id="semesterChangeForm" class="space-y-6" data-edit-form="true">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Academic Year Selection -->
                         <div>
@@ -89,6 +103,119 @@
                                     </option>
                                 {% endfor %}
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Semester Date Ranges (all 3 semesters) -->
+                    <div id="semesterDatesSection" class="hidden">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-center mb-4">
+                                <svg class="h-5 w-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <h4 class="text-sm font-semibold text-blue-800">Semester Date Ranges</h4>
+                                <span class="ml-2 text-xs text-blue-600">(Used for auto-transition)</span>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- 1st Semester Dates -->
+                                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h5 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">1st Semester</h5>
+                                        <button type="button" data-clear-semester="1st" title="Clear 1st Semester dates"
+                                                class="clear-semester-btn text-xs text-gray-400 cursor-not-allowed px-2 py-0.5 rounded transition-colors">
+                                            <svg class="inline h-3.5 w-3.5 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                            Clear
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="semester_1st_start" class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+                                            <input type="date" id="semester_1st_start" name="semester_1st_start"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label for="semester_1st_end" class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+                                            <input type="date" id="semester_1st_end" name="semester_1st_end"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2nd Semester Dates -->
+                                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h5 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">2nd Semester</h5>
+                                        <button type="button" data-clear-semester="2nd" title="Clear 2nd Semester dates"
+                                                class="clear-semester-btn text-xs text-gray-400 cursor-not-allowed px-2 py-0.5 rounded transition-colors">
+                                            <svg class="inline h-3.5 w-3.5 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                            Clear
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="semester_2nd_start" class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+                                            <input type="date" id="semester_2nd_start" name="semester_2nd_start"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label for="semester_2nd_end" class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+                                            <input type="date" id="semester_2nd_end" name="semester_2nd_end"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Summer Dates -->
+                                <div class="bg-white rounded-lg p-3 border border-blue-100">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h5 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Summer</h5>
+                                        <button type="button" data-clear-semester="Summer" title="Clear Summer dates"
+                                                class="clear-semester-btn text-xs text-gray-400 cursor-not-allowed px-2 py-0.5 rounded transition-colors">
+                                            <svg class="inline h-3.5 w-3.5 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                            Clear
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label for="semester_summer_start" class="block text-xs font-medium text-gray-500 mb-1">Start Date</label>
+                                            <input type="date" id="semester_summer_start" name="semester_summer_start"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                        <div>
+                                            <label for="semester_summer_end" class="block text-xs font-medium text-gray-500 mb-1">End Date</label>
+                                            <input type="date" id="semester_summer_end" name="semester_summer_end"
+                                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Date sequence warnings -->
+                            <div id="dateSequenceWarning" class="hidden mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div class="flex items-start">
+                                    <svg class="h-4 w-4 text-red-500 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div>
+                                        <p class="text-xs font-semibold text-red-700">Date sequence error</p>
+                                        <p class="text-xs text-red-600 mt-0.5" id="dateSequenceWarningText"></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="mt-3 text-xs text-blue-600">
+                                <svg class="inline h-3.5 w-3.5 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Dates must follow the sequence: 1st Semester &rarr; 2nd Semester &rarr; Summer. The system auto-transitions when the active semester ends.
+                            </p>
                         </div>
                     </div>
 
@@ -184,6 +311,177 @@
                 </div>
             </div>
         </div>
+
+        <!-- Semester Timeline Card -->
+        {% if hasActiveSemester %}
+        <div class="mt-6 bg-white shadow-md rounded-xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            <svg class="inline h-5 w-5 mr-1 -mt-0.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Semester Timeline
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-0.5">Auto-transition chain: 1st &rarr; 2nd &rarr; Summer &rarr; next year</p>
+                    </div>
+                    {% if auto_transition_status.has_dates %}
+                        {% if auto_transition_status.is_expired %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                <svg class="h-4 w-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                Transition Pending
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                <svg class="h-4 w-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                Active
+                            </span>
+                        {% endif %}
+                    {% else %}
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                            <svg class="h-4 w-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            No Dates Set
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-6">
+                {% if auto_transition_status.all_semesters|length > 0 %}
+                    {# Full semester timeline showing all 3 semesters #}
+                    <div class="space-y-0">
+                        {% for semKey, sem in auto_transition_status.all_semesters %}
+                            <div class="relative flex items-start">
+                                {# Timeline connector line #}
+                                {% if not loop.last %}
+                                    <div class="absolute left-[19px] top-10 w-0.5 h-full
+                                        {% if sem.status == 'completed' or sem.status == 'active' %}bg-blue-300{% else %}bg-gray-200{% endif %}
+                                    "></div>
+                                {% endif %}
+
+                                {# Timeline dot #}
+                                <div class="relative flex-shrink-0 w-10 flex justify-center pt-1 z-10">
+                                    {% if sem.is_active %}
+                                        <div class="h-5 w-5 rounded-full bg-blue-600 border-4 border-blue-200 ring-2 ring-blue-600"></div>
+                                    {% elseif sem.status == 'completed' %}
+                                        <div class="h-5 w-5 rounded-full bg-green-500 border-2 border-green-200 flex items-center justify-center">
+                                            <svg class="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                            </svg>
+                                        </div>
+                                    {% elseif sem.has_dates %}
+                                        <div class="h-5 w-5 rounded-full bg-gray-300 border-2 border-gray-200"></div>
+                                    {% else %}
+                                        <div class="h-5 w-5 rounded-full border-2 border-gray-300 border-dashed bg-white"></div>
+                                    {% endif %}
+                                </div>
+
+                                {# Semester card #}
+                                <div class="flex-1 ml-3 pb-5">
+                                    <div class="rounded-lg border p-4
+                                        {% if sem.is_active and not sem.is_expired %}
+                                            border-blue-300 bg-blue-50 shadow-sm
+                                        {% elseif sem.is_active and sem.is_expired %}
+                                            border-red-300 bg-red-50
+                                        {% elseif sem.status == 'completed' %}
+                                            border-green-200 bg-green-50/50
+                                        {% elseif sem.has_dates %}
+                                            border-gray-200 bg-gray-50
+                                        {% else %}
+                                            border-gray-200 bg-gray-50 border-dashed
+                                        {% endif %}
+                                    ">
+                                        <div class="flex items-center justify-between flex-wrap gap-2">
+                                            <div class="flex items-center">
+                                                <h4 class="text-sm font-semibold
+                                                    {% if sem.is_active %}text-blue-800{% elseif sem.status == 'completed' %}text-green-700{% else %}text-gray-700{% endif %}
+                                                ">{{ sem.label }}</h4>
+
+                                                {% if sem.is_active %}
+                                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-600 text-white">
+                                                        Current
+                                                    </span>
+                                                {% elseif sem.status == 'completed' %}
+                                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                        Completed
+                                                    </span>
+                                                {% elseif sem.status == 'upcoming' %}
+                                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                        Upcoming
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+
+                                            {% if sem.has_dates %}
+                                                <div class="text-right">
+                                                    {% if sem.is_active and sem.is_expired %}
+                                                        <span class="text-xs font-medium text-red-600">Expired &mdash; transition pending</span>
+                                                    {% elseif sem.is_active and sem.days_remaining is not null %}
+                                                        <span class="text-xs font-medium
+                                                            {% if sem.days_remaining <= 14 %}text-yellow-600{% else %}text-blue-600{% endif %}
+                                                        ">{{ sem.days_remaining }} day{{ sem.days_remaining != 1 ? 's' : '' }} remaining</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if sem.has_dates %}
+                                            <p class="mt-1 text-sm {% if sem.is_active %}text-blue-700{% elseif sem.status == 'completed' %}text-green-600{% else %}text-gray-500{% endif %}">
+                                                {{ sem.start }} &mdash; {{ sem.end }}
+                                            </p>
+                                        {% else %}
+                                            <p class="mt-1 text-xs text-gray-400 italic">No dates configured</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {# Next semester info #}
+                    {% if auto_transition_status.next_semester %}
+                        <div class="mt-2 flex items-center text-sm text-gray-500 ml-12">
+                            <svg class="h-4 w-4 mr-1.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                            Next transition: <span class="ml-1 font-medium text-indigo-600">{{ auto_transition_status.next_semester }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if auto_transition_status.is_expired %}
+                        <div class="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="flex">
+                                <svg class="h-5 w-5 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">Semester has expired!</h3>
+                                    <p class="mt-1 text-sm text-red-700">
+                                        The current semester's end date has passed. The system will automatically transition to 
+                                        <strong>{{ auto_transition_status.next_semester ?? 'the next semester' }}</strong> on the next scheduled check.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-6">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="mt-2 text-sm text-gray-500">No semester dates configured.</p>
+                        <p class="text-xs text-gray-400 mt-1">Set start and end dates above when changing the active semester to enable auto-transition.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -235,6 +533,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmButton = document.getElementById('confirmButton');
     const cancelButton = document.getElementById('cancelButton');
     const confirmMessage = document.getElementById('confirmMessage');
+    const semesterDatesSection = document.getElementById('semesterDatesSection');
+
+    // All 3 semester date inputs
+    const semesterDateInputs = {
+        '1st': { start: document.getElementById('semester_1st_start'), end: document.getElementById('semester_1st_end') },
+        '2nd': { start: document.getElementById('semester_2nd_start'), end: document.getElementById('semester_2nd_end') },
+        'Summer': { start: document.getElementById('semester_summer_start'), end: document.getElementById('semester_summer_end') },
+    };
+
+    // Cache for loaded semester dates per academic year
+    let semesterDatesCache = {};
+
+    // Track the server-side active year ID so autoSuggest only fires for different years
+    const activeYearId = '{{ active_year ? active_year.id : '' }}';
+    let isInitialLoad = true;
 
     // Load current schedule count
     function loadScheduleCount() {
@@ -251,6 +564,247 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadScheduleCount();
 
+    // Show/hide semester dates section and load saved dates for ALL semesters
+    function updateSemesterDatesVisibility() {
+        const yearId = academicYearSelect.value;
+
+        if (yearId) {
+            semesterDatesSection.classList.remove('hidden');
+            loadAllSemesterDates(yearId);
+        } else {
+            semesterDatesSection.classList.add('hidden');
+            clearAllSemesterDates();
+        }
+    }
+
+    // Clear all date inputs
+    function clearAllSemesterDates() {
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            semesterDateInputs[sem].start.value = '';
+            semesterDateInputs[sem].end.value = '';
+        }
+    }
+
+    // Load saved semester dates for all 3 semesters via AJAX
+    function loadAllSemesterDates(yearId) {
+        if (semesterDatesCache[yearId]) {
+            applyAllSemesterDates(semesterDatesCache[yearId]);
+            return;
+        }
+
+        fetch(`{{ path('admin_get_semester_dates', {yearId: '__YEAR_ID__'}) }}`.replace('__YEAR_ID__', yearId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.dates) {
+                    semesterDatesCache[yearId] = data.dates;
+                    applyAllSemesterDates(data.dates);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading semester dates:', error);
+            });
+    }
+
+    // Populate all 3 semester date input pairs and auto-suggest the right semester
+    function applyAllSemesterDates(dates) {
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            if (dates[sem]) {
+                semesterDateInputs[sem].start.value = dates[sem].start || '';
+                semesterDateInputs[sem].end.value = dates[sem].end || '';
+            } else {
+                semesterDateInputs[sem].start.value = '';
+                semesterDateInputs[sem].end.value = '';
+            }
+        }
+
+        // Only auto-suggest semester when the user changes to a DIFFERENT academic year.
+        // On initial page load the server already selects the correct active semester.
+        const selectedYearId = academicYearSelect.value;
+        if (!isInitialLoad || selectedYearId !== activeYearId) {
+            autoSuggestSemester(dates);
+        }
+        isInitialLoad = false;
+
+        // Show/hide clear buttons based on which semesters have dates
+        updateClearButtonVisibility();
+    }
+
+    // Determine which semester should be active based on today's date and the configured dates
+    function autoSuggestSemester(dates) {
+        // Only auto-suggest if the user hasn't manually picked a semester yet
+        // (if the dropdown still matches the server-side active semester, suggest intelligently)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const semesterOrder = ['1st', '2nd', 'Summer'];
+
+        // 1) Try to find a semester whose date range contains today
+        for (const sem of semesterOrder) {
+            if (dates[sem] && dates[sem].start && dates[sem].end) {
+                const start = new Date(dates[sem].start + 'T00:00:00');
+                const end = new Date(dates[sem].end + 'T23:59:59');
+                if (today >= start && today <= end) {
+                    semesterSelect.value = sem;
+                    return;
+                }
+            }
+        }
+
+        // 2) If no semester contains today, pick the next upcoming one
+        for (const sem of semesterOrder) {
+            if (dates[sem] && dates[sem].start) {
+                const start = new Date(dates[sem].start + 'T00:00:00');
+                if (today < start) {
+                    semesterSelect.value = sem;
+                    return;
+                }
+            }
+        }
+
+        // 3) Fallback: if all semesters have ended, keep whatever is selected (or default to 1st)
+        if (!semesterSelect.value) {
+            semesterSelect.value = '1st';
+        }
+    }
+
+    // Collect all semester dates from the inputs
+    function collectAllSemesterDates() {
+        const allDates = {};
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            const start = semesterDateInputs[sem].start.value;
+            const end = semesterDateInputs[sem].end.value;
+            if (start || end) {
+                allDates[sem] = { start: start || null, end: end || null };
+            }
+        }
+        return allDates;
+    }
+
+    // Validate that semester dates follow the correct sequence: 1st < 2nd < Summer
+    function validateDateSequence() {
+        const warningEl = document.getElementById('dateSequenceWarning');
+        const warningTextEl = document.getElementById('dateSequenceWarningText');
+        const errors = [];
+
+        const allDates = collectAllSemesterDates();
+        const semPairs = [
+            { first: '1st', second: '2nd', firstLabel: '1st Semester', secondLabel: '2nd Semester' },
+            { first: '2nd', second: 'Summer', firstLabel: '2nd Semester', secondLabel: 'Summer' },
+        ];
+
+        for (const pair of semPairs) {
+            const firstDates = allDates[pair.first];
+            const secondDates = allDates[pair.second];
+
+            if (firstDates && secondDates && firstDates.end && secondDates.start) {
+                const firstEnd = new Date(firstDates.end + 'T23:59:59');
+                const secondStart = new Date(secondDates.start + 'T00:00:00');
+                if (secondStart <= firstEnd) {
+                    errors.push(`${pair.secondLabel} start (${secondDates.start}) must be after ${pair.firstLabel} end (${firstDates.end})`);
+                }
+            }
+        }
+
+        // Also check individual start < end
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            const d = allDates[sem];
+            if (d && d.start && d.end) {
+                if (new Date(d.start) >= new Date(d.end)) {
+                    const label = sem === 'Summer' ? 'Summer' : sem + ' Semester';
+                    errors.push(`${label}: start date must be before end date`);
+                }
+            }
+        }
+
+        if (errors.length > 0) {
+            warningTextEl.innerHTML = errors.join('<br>');
+            warningEl.classList.remove('hidden');
+            return false;
+        } else {
+            warningEl.classList.add('hidden');
+            return true;
+        }
+    }
+
+    // Add real-time validation on any date input change + toggle clear button styling
+    function updateClearButtonVisibility() {
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            const btn = document.querySelector('[data-clear-semester="' + sem + '"]');
+            const hasValue = semesterDateInputs[sem].start.value || semesterDateInputs[sem].end.value;
+            if (btn) {
+                if (hasValue) {
+                    btn.classList.remove('text-gray-400', 'cursor-not-allowed');
+                    btn.classList.add('text-red-500', 'hover:text-red-700', 'hover:bg-red-50', 'cursor-pointer');
+                    btn.disabled = false;
+                } else {
+                    btn.classList.add('text-gray-400', 'cursor-not-allowed');
+                    btn.classList.remove('text-red-500', 'hover:text-red-700', 'hover:bg-red-50', 'cursor-pointer');
+                    btn.disabled = true;
+                }
+            }
+        }
+    }
+
+    for (const sem of ['1st', '2nd', 'Summer']) {
+        semesterDateInputs[sem].start.addEventListener('change', function() { validateDateSequence(); updateClearButtonVisibility(); });
+        semesterDateInputs[sem].end.addEventListener('change', function() { validateDateSequence(); updateClearButtonVisibility(); });
+    }
+
+    // Clear semester dates handler — use event delegation on the form for reliability
+    document.getElementById('semesterChangeForm').addEventListener('click', function(e) {
+        var btn = e.target.closest('.clear-semester-btn');
+        if (!btn || btn.disabled) return;
+
+        var sem = btn.getAttribute('data-clear-semester');
+        var yearId = academicYearSelect.value;
+        if (!yearId || !sem) return;
+
+        var label = sem === 'Summer' ? 'Summer' : sem + ' Semester';
+        if (!confirm('Clear dates for ' + label + '? This will remove the saved dates from the database.')) {
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="inline animate-spin h-3.5 w-3.5 mr-0.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Clearing...';
+
+        fetch('{{ path('admin_clear_semester_dates') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ academic_year_id: yearId, semester: sem })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                semesterDateInputs[sem].start.value = '';
+                semesterDateInputs[sem].end.value = '';
+                delete semesterDatesCache[yearId];
+                updateClearButtonVisibility();
+                validateDateSequence();
+                showNotification(label + ' dates cleared', 'success');
+                setTimeout(function() { window.location.href = '{{ path('admin_system_settings') }}'; }, 1500);
+            } else {
+                showNotification(data.message || 'Failed to clear dates', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="inline h-3.5 w-3.5 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Clear';
+            }
+        })
+        .catch(function(err) {
+            showNotification('An error occurred: ' + err.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="inline h-3.5 w-3.5 mr-0.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Clear';
+        });
+    });
+
+    // Listen to year dropdown change (loads all semester dates)
+    academicYearSelect.addEventListener('change', function() {
+        updateSemesterDatesVisibility();
+    });
+
+    // Initialize date visibility on page load
+    updateSemesterDatesVisibility();
+
     // Preview button handler
     previewButton.addEventListener('click', function() {
         const yearId = academicYearSelect.value;
@@ -263,6 +817,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const yearText = academicYearSelect.options[academicYearSelect.selectedIndex].text;
         const semesterText = semester + ' Semester';
+        const allDates = collectAllSemesterDates();
+
+        let dateInfo = '';
+        let hasAnyDates = false;
+        for (const sem of ['1st', '2nd', 'Summer']) {
+            if (allDates[sem] && allDates[sem].start && allDates[sem].end) {
+                const startFormatted = new Date(allDates[sem].start + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const endFormatted = new Date(allDates[sem].end + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                dateInfo += `<li>${sem} Semester: ${startFormatted} — ${endFormatted}</li>`;
+                hasAnyDates = true;
+            }
+        }
+        if (hasAnyDates) {
+            dateInfo += `<li>Auto-transition will chain through semesters with dates set</li>`;
+        } else {
+            dateInfo = `<li class="text-yellow-600">No semester dates set — auto-transition will be disabled</li>`;
+        }
 
         warningContent.innerHTML = `
             <p>You are about to change the active semester to:</p>
@@ -272,6 +843,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <li>All schedule viewing and creation</li>
                 <li>Faculty load assignments</li>
                 <li>Room availability displays</li>
+                ${dateInfo}
             </ul>
         `;
         warningMessage.classList.remove('hidden');
@@ -289,10 +861,21 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Validate date sequence (1st < 2nd < Summer)
+        if (!validateDateSequence()) {
+            showNotification('Please fix the date sequence errors before applying', 'error');
+            return;
+        }
+
         const yearText = academicYearSelect.options[academicYearSelect.selectedIndex].text;
         const semesterText = semester + ' Semester';
 
-        confirmMessage.textContent = `Are you sure you want to change the active semester to ${yearText} | ${semesterText}?`;
+        // Count how many semesters have dates configured
+        const allDates = collectAllSemesterDates();
+        const configuredCount = Object.keys(allDates).filter(s => allDates[s] && allDates[s].start && allDates[s].end).length;
+        let dateMessage = configuredCount > 0 ? ` (${configuredCount} semester date(s) configured)` : '';
+
+        confirmMessage.textContent = `Are you sure you want to change the active semester to ${yearText} | ${semesterText}${dateMessage}?`;
         confirmModal.classList.remove('hidden');
     });
 
@@ -300,6 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
     confirmButton.addEventListener('click', function() {
         const yearId = academicYearSelect.value;
         const semester = semesterSelect.value;
+        const allDates = collectAllSemesterDates();
 
         applyButton.disabled = true;
         applyButton.innerHTML = `
@@ -310,15 +894,18 @@ document.addEventListener('DOMContentLoaded', function() {
             Applying...
         `;
 
+        const payload = {
+            academic_year_id: yearId,
+            semester: semester,
+            all_semester_dates: allDates
+        };
+
         fetch('{{ path('admin_set_active_semester') }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                academic_year_id: yearId,
-                semester: semester
-            })
+            body: JSON.stringify(payload)
         })
         .then(response => response.json())
         .then(data => {
@@ -326,6 +913,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.success) {
                 showNotification('Active semester updated successfully!', 'success');
+                // Clear cache so dates reload on next visit
+                semesterDatesCache = {};
                 setTimeout(() => {
                     window.location.href = '{{ path('admin_system_settings') }}';
                 }, 1500);
